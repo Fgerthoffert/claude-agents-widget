@@ -93,7 +93,9 @@ describe('claude-agents-widget-hook', () => {
   });
 
   it('keeps notification_type while the session needs input and clears it afterwards', () => {
-    runHook(payloadFor({ hook_event_name: 'Notification', notification_type: 'permission_prompt' }));
+    runHook(
+      payloadFor({ hook_event_name: 'Notification', notification_type: 'permission_prompt' }),
+    );
     expect(readRecord('sess-1')).toMatchObject({
       state: 'needs_input',
       notificationType: 'permission_prompt',

@@ -28,11 +28,7 @@ const fromRecord = (record: SessionRecord, state: SessionState, title: string | 
   ancestors: record.ancestors,
 });
 
-const fromScan = (
-  scanned: ScannedSession,
-  title: string | null,
-  nowMs: number,
-): Session => ({
+const fromScan = (scanned: ScannedSession, title: string | null, nowMs: number): Session => ({
   sessionId: scanned.sessionId,
   title,
   cwd: scanned.cwd,

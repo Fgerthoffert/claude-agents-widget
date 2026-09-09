@@ -23,7 +23,12 @@ const populated: ClaudeSettings = {
     UserPromptSubmit: [
       {
         hooks: [
-          { type: 'command', command: 'python3', args: ['/Users/test/.claude/other.py'], timeout: 25 },
+          {
+            type: 'command',
+            command: 'python3',
+            args: ['/Users/test/.claude/other.py'],
+            timeout: 25,
+          },
         ],
       },
     ],
@@ -37,30 +42,30 @@ describe('mergeHookSettings', () => {
     expect(result.added).toEqual(EVENTS);
     expect(result.unchanged).toEqual([]);
     expect(Object.keys(result.settings?.hooks ?? {})).toEqual(EVENTS);
-    expect(result.settings?.hooks?.['Stop']).toEqual([ourEntry]);
+    expect(result.settings?.hooks?.Stop).toEqual([ourEntry]);
   });
 
   it('registers the command as `node <hookPath>`, since the payload arrives on stdin', () => {
-    const [group] = merge({}).settings?.hooks?.['SessionStart'] ?? [];
+    const [group] = merge({}).settings?.hooks?.SessionStart ?? [];
     expect(group?.hooks).toEqual([{ type: 'command', command: `node ${HOOK_PATH}` }]);
     expect(group?.matcher).toBeUndefined();
   });
 
   it('appends alongside existing hooks instead of replacing them', () => {
     const result = merge(populated);
-    const sessionStart = result.settings?.hooks?.['SessionStart'] ?? [];
+    const sessionStart = result.settings?.hooks?.SessionStart ?? [];
 
     expect(sessionStart).toHaveLength(2);
-    expect(sessionStart[0]).toEqual(populated.hooks?.['SessionStart']?.[0]);
+    expect(sessionStart[0]).toEqual(populated.hooks?.SessionStart?.[0]);
     expect(sessionStart[1]).toEqual(ourEntry);
   });
 
   it('leaves other events and top-level keys alone', () => {
     const result = merge(populated);
 
-    expect(result.settings?.hooks?.['PreToolUse']).toEqual([]);
-    expect(result.settings?.['theme']).toBe('dark');
-    expect(result.settings?.['model']).toBe('opus');
+    expect(result.settings?.hooks?.PreToolUse).toEqual([]);
+    expect(result.settings?.theme).toBe('dark');
+    expect(result.settings?.model).toBe('opus');
   });
 
   it('is a no-op when every event already references our hook', () => {
@@ -80,7 +85,7 @@ describe('mergeHookSettings', () => {
 
     expect(result.unchanged).toEqual(['Stop', 'Notification']);
     expect(result.added).toEqual(['SessionStart', 'UserPromptSubmit', 'SessionEnd']);
-    expect(result.settings?.hooks?.['Stop']).toEqual([ourEntry]);
+    expect(result.settings?.hooks?.Stop).toEqual([ourEntry]);
   });
 
   it('recognises our hook by path, so an upgraded command string is still ours', () => {
@@ -104,7 +109,7 @@ describe('mergeHookSettings', () => {
     };
 
     expect(merge(other).added).toContain('Stop');
-    expect(merge(other).settings?.hooks?.['Stop']).toHaveLength(2);
+    expect(merge(other).settings?.hooks?.Stop).toHaveLength(2);
   });
 
   it('tolerates groups with no hooks array', () => {
@@ -112,7 +117,7 @@ describe('mergeHookSettings', () => {
     const result = merge(odd);
 
     expect(result.added).toContain('Stop');
-    expect(result.settings?.hooks?.['Stop']).toEqual([{ matcher: 'startup' }, ourEntry]);
+    expect(result.settings?.hooks?.Stop).toEqual([{ matcher: 'startup' }, ourEntry]);
   });
 
   it('does not mutate the settings it was given', () => {

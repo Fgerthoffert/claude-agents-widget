@@ -19,14 +19,14 @@ const asAncestors = (value: unknown): readonly Ancestor[] =>
   Array.isArray(value)
     ? value.flatMap((entry) => {
         const record = asRecord(entry);
-        const pid = record ? asPid(record['pid']) : null;
+        const pid = record ? asPid(record.pid) : null;
         return record === null || pid === null
           ? []
           : [
               {
                 pid,
-                comm: asString(record['comm']) ?? '',
-                args: asString(record['args']) ?? '',
+                comm: asString(record.comm) ?? '',
+                args: asString(record.args) ?? '',
               },
             ];
       })
@@ -43,26 +43,26 @@ export const parseSessionRecord = (value: unknown): SessionRecord | null => {
   const record = asRecord(value);
   if (!record) return null;
 
-  const sessionId = asString(record['sessionId']);
-  const state = asState(record['state']);
-  const updatedAt = asString(record['updatedAt']);
+  const sessionId = asString(record.sessionId);
+  const state = asState(record.state);
+  const updatedAt = asString(record.updatedAt);
   if (sessionId === null || sessionId === '' || state === null || updatedAt === null) return null;
   if (Number.isNaN(Date.parse(updatedAt))) return null;
 
   return {
     sessionId,
-    cwd: asString(record['cwd']),
-    transcriptPath: asString(record['transcriptPath']),
+    cwd: asString(record.cwd),
+    transcriptPath: asString(record.transcriptPath),
     state,
-    lastEvent: asString(record['lastEvent']),
-    notificationType: asString(record['notificationType']),
-    notificationMessage: asString(record['notificationMessage']),
-    endReason: asString(record['endReason']),
-    agentId: asString(record['agentId']),
-    agentType: asString(record['agentType']),
+    lastEvent: asString(record.lastEvent),
+    notificationType: asString(record.notificationType),
+    notificationMessage: asString(record.notificationMessage),
+    endReason: asString(record.endReason),
+    agentId: asString(record.agentId),
+    agentType: asString(record.agentType),
     updatedAt,
-    hookPid: asPid(record['hookPid']),
-    claudePid: asPid(record['claudePid']),
-    ancestors: asAncestors(record['ancestors']),
+    hookPid: asPid(record.hookPid),
+    claudePid: asPid(record.claudePid),
+    ancestors: asAncestors(record.ancestors),
   };
 };

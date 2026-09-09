@@ -21,18 +21,16 @@ const parseLine = (line: string): Record<string, unknown> | null => {
 /** Pulls the prompt text out of a `user` record, whose content is a string or a block list. */
 const userPromptText = (record: Record<string, unknown>): string | null => {
   // isMeta records are command scaffolding (`<local-command-stdout>`, …), not real prompts.
-  if (record['isMeta'] === true || record['isSidechain'] === true) return null;
-  const message = asRecord(record['message']);
+  if (record.isMeta === true || record.isSidechain === true) return null;
+  const message = asRecord(record.message);
   if (!message) return null;
 
   const { content } = message;
   if (typeof content === 'string') return asString(content);
   if (!Array.isArray(content)) return null;
 
-  const textBlock = content
-    .map((block) => asRecord(block))
-    .find((block) => block?.['type'] === 'text');
-  return textBlock ? asString(textBlock['text']) : null;
+  const textBlock = content.map((block) => asRecord(block)).find((block) => block?.type === 'text');
+  return textBlock ? asString(textBlock.text) : null;
 };
 
 const truncate = (text: string): string => {
@@ -62,9 +60,9 @@ export const extractSessionTitle = (jsonl: string): string | null => {
     const record = parseLine(line);
     if (!record) continue;
 
-    const type = record['type'];
-    if (type === 'custom-title') customTitle = asString(record['customTitle']) ?? customTitle;
-    else if (type === 'ai-title') aiTitle = asString(record['aiTitle']) ?? aiTitle;
+    const type = record.type;
+    if (type === 'custom-title') customTitle = asString(record.customTitle) ?? customTitle;
+    else if (type === 'ai-title') aiTitle = asString(record.aiTitle) ?? aiTitle;
     else if (type === 'user' && firstPrompt === null) firstPrompt = userPromptText(record);
   }
 

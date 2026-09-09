@@ -18,7 +18,8 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "install-hooks": "node --experimental-strip-types scripts/installHooks.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",

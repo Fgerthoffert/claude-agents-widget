@@ -17,7 +17,7 @@ const isClaudeCli = (command: string): boolean => {
   if (!isNodeRuntime(argv0)) return false;
   return tokens
     .slice(1)
-    .some((token) => baseName(token) === 'claude' || /claude-code\/cli\.js$/.test(token));
+    .some((token) => baseName(token) === 'claude' || token.endsWith('claude-code/cli.js'));
 };
 
 /**
