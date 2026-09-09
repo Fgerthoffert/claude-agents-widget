@@ -17,12 +17,15 @@
         "width": 320,
         "height": 400,
         "minWidth": 240,
-        "minHeight": 160,
+        "minHeight": 120,
         "alwaysOnTop": true,
         "visibleOnAllWorkspaces": true,
         "decorations": false,
         "skipTaskbar": true,
-        "resizable": true
+        "resizable": true,
+        "maximizable": false,
+        "minimizable": false,
+        "shadow": true
       }
     ],
     "security": {

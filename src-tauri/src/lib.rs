@@ -26,6 +26,14 @@ pub fn run() {
         // process scanner. Both are scoped in capabilities/default.json.
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
+        // UI surfaces: panel geometry persistence, Quit from the TypeScript tray menu, and
+        // launch at login (opt-in, toggled from the tray).
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .setup(|app| {
             // Menu-bar-only app: no Dock icon, never takes over as the active app.
             #[cfg(target_os = "macos")]
@@ -40,7 +48,11 @@ pub fn run() {
                 .expect("bundle always provides a default window icon")
                 .clone();
 
-            TrayIconBuilder::new()
+            // `with_id` is the handle the TypeScript layer looks the tray up by
+            // (`TrayIcon.getById('main')` in src/ui/useTray.ts) to set the live label and the
+            // session dropdown. This Rust menu is the fallback that keeps Quit reachable if
+            // the webview never loads.
+            TrayIconBuilder::with_id("main")
                 .icon(icon)
                 // Template rendering lets macOS tint the icon for light/dark menu bars.
                 .icon_as_template(true)

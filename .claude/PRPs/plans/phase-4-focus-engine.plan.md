@@ -47,12 +47,12 @@ Session.ancestors ──> identifyOwnerApp() ──> {app: 'vscode'|'iterm2'|'te
 
 ## Adapters required (v1)
 
-| App | Detection (in `args`) | Focus strategy |
-|---|---|---|
-| VS Code | `Visual Studio Code.app` / `Code Helper` | **Priority.** Identify the _window_ by workspace folder = session `cwd`. VS Code has no AppleScript window API: activate the app, then use `System Events` to pick the window whose title contains the workspace/folder basename; fall back to `open -b com.microsoft.VSCode <cwd>` (verify it focuses the existing window rather than duplicating). Cursor / VS Code Insiders variants are a bonus if trivial. |
-| iTerm2 | `iTerm.app` | Scriptable and precise: iterate windows/tabs/sessions; select the session whose `tty` matches, else whose title/current working directory matches. Prefer **tty matching** — capture the claude process's tty (`ps -o tty=`) if not already available. |
-| Terminal.app | `Terminal.app` | `tell application "Terminal"` → find the tab whose `tty` matches; `set selected tab of window w to t` + `activate`. |
-| Anything else | — | `open -b <bundleId>` app-level fallback if a bundle id is derivable from the ancestor path; else `{ok: false, reason: 'unsupported-host'}`. |
+| App           | Detection (in `args`)                    | Focus strategy                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| VS Code       | `Visual Studio Code.app` / `Code Helper` | **Priority.** Identify the _window_ by workspace folder = session `cwd`. VS Code has no AppleScript window API: activate the app, then use `System Events` to pick the window whose title contains the workspace/folder basename; fall back to `open -b com.microsoft.VSCode <cwd>` (verify it focuses the existing window rather than duplicating). Cursor / VS Code Insiders variants are a bonus if trivial. |
+| iTerm2        | `iTerm.app`                              | Scriptable and precise: iterate windows/tabs/sessions; select the session whose `tty` matches, else whose title/current working directory matches. Prefer **tty matching** — capture the claude process's tty (`ps -o tty=`) if not already available.                                                                                                                                                          |
+| Terminal.app  | `Terminal.app`                           | `tell application "Terminal"` → find the tab whose `tty` matches; `set selected tab of window w to t` + `activate`.                                                                                                                                                                                                                                                                                             |
+| Anything else | —                                        | `open -b <bundleId>` app-level fallback if a bundle id is derivable from the ancestor path; else `{ok: false, reason: 'unsupported-host'}`.                                                                                                                                                                                                                                                                     |
 
 Design the adapter map so adding Warp/Ghostty/Kitty/tmux later is purely additive (one new file + one map entry + tests).
 
@@ -86,9 +86,9 @@ Design the adapter map so adding Warp/Ghostty/Kitty/tmux later is purely additiv
 
 ## Risks
 
-| Risk | Mitigation |
-|---|---|
+| Risk                                                      | Mitigation                                                                                                                                                  |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | VS Code window focusing unreliable (the user's main case) | Try `System Events` title matching AND `open -b` with cwd; document which worked in the ADR; always fall back to app activation so a click is never a no-op |
-| AppleScript injection via session-derived strings | `escapeAppleScriptString` applied everywhere, adversarial tests, pure builders keep it reviewable |
-| Automation permission blocks everything on first run | Typed `permission-denied` result + note for Phase 5 first-run guide |
-| tty not captured in Phase 2 records | If tty is needed for iTerm2/Terminal precision, add it to the hook/scanner here (small additive change) and note it in ADR-0007 |
+| AppleScript injection via session-derived strings         | `escapeAppleScriptString` applied everywhere, adversarial tests, pure builders keep it reviewable                                                           |
+| Automation permission blocks everything on first run      | Typed `permission-denied` result + note for Phase 5 first-run guide                                                                                         |
+| tty not captured in Phase 2 records                       | If tty is needed for iTerm2/Terminal precision, add it to the hook/scanner here (small additive change) and note it in ADR-0007                             |

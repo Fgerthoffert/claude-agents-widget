@@ -94,10 +94,10 @@ Non-negotiables:
 
 ## Risks
 
-| Risk | Mitigation |
-|---|---|
-| Drag region swallows row clicks (or vice versa) | Drag on background/header only; explicit smoke test for both gestures |
+| Risk                                                   | Mitigation                                                                            |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| Drag region swallows row clicks (or vice versa)        | Drag on background/header only; explicit smoke test for both gestures                 |
 | Always-on-top loses to full-screen apps (macOS spaces) | Verify against a real full-screen video window; document actual behaviour in ADR-0008 |
-| Saved position off-screen after monitor change | Clamp to nearest available display on restore; test with a synthetic monitor list |
-| 1s ticker causes re-render churn at 10+ rows | Tick a single clock value; memoize rows; verify idle CPU stays ~0% |
-| Tray label too long for the menu bar | Cap the string; counts-only format |
+| Saved position off-screen after monitor change         | Clamp to nearest available display on restore; test with a synthetic monitor list     |
+| 1s ticker causes re-render churn at 10+ rows           | Tick a single clock value; memoize rows; verify idle CPU stays ~0%                    |
+| Tray label too long for the menu bar                   | Cap the string; counts-only format                                                    |
