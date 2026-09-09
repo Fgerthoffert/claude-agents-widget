@@ -192,3 +192,12 @@ route 2 up:
    the window server is not compositing, so AppKit's own answer is not trustworthy here.
 4. Pin the panel's position with an isolated `HOME`, so the persisted frame in `panel.json` cannot
    move it mid-test.
+
+One more trap, found the hard way: during this investigation the frontend's
+`invoke('float_above_fullscreen')` **never reached Rust in any run**, and failed completely
+silently — the flags only ever got set by the `setup` call, and nothing in the logs said otherwise.
+Whatever route 2 exposes to TypeScript needs a wiring test that fails loudly if the command is not
+reachable, in the spirit of the permission assertions the repo already keeps for the drag region:
+assert the command is registered in `generate_handler!`, not just that the TypeScript compiles.
+App-local commands are not in `gen/schemas/acl-manifests.json`, so unlike a plugin command a
+missing one produces no ACL error to notice.
