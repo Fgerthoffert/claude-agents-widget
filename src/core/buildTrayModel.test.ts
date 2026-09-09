@@ -18,13 +18,21 @@ const session = (sessionId: string, state: SessionState, title: string | null): 
 });
 
 describe('buildTrayModel', () => {
-  it('labels the menu bar with the glyph aggregate', () => {
+  it('marks the menu bar, without a count, when something is waiting', () => {
     const model = buildTrayModel([
       session('a', 'needs_input', 'Fix the tray'),
       session('b', 'working', 'Refactor'),
       session('c', 'working', 'Docs'),
     ]);
-    expect(model.label).toBe('2▶ 1⏸');
+    expect(model.label).toBe('●');
+  });
+
+  it('leaves the menu bar unmarked while every session is working', () => {
+    const model = buildTrayModel([
+      session('a', 'working', 'Refactor'),
+      session('b', 'working', 'Docs'),
+    ]);
+    expect(model.label).toBe('');
   });
 
   it('spells the summary out in words', () => {
@@ -38,7 +46,7 @@ describe('buildTrayModel', () => {
 
   it('reads as empty when nothing is running', () => {
     const model = buildTrayModel([]);
-    expect(model.label).toBe('idle');
+    expect(model.label).toBe('');
     expect(model.summary).toBe('No active sessions');
     expect(model.items).toEqual([]);
     expect(model.overflow).toBe(0);
@@ -60,12 +68,12 @@ describe('buildTrayModel', () => {
     expect(model.items[0]?.text).toBe('▶  api');
   });
 
-  it('excludes ended sessions from the dropdown, matching the aggregate', () => {
+  it('excludes ended sessions from the dropdown, matching the summary', () => {
     const model = buildTrayModel([
       session('a', 'working', 'Refactor'),
       session('b', 'ended', 'Finished'),
     ]);
-    expect(model.label).toBe('1▶');
+    expect(model.label).toBe('');
     expect(model.summary).toBe('1 working');
     expect(model.items.map((item) => item.sessionId)).toEqual(['a']);
   });
@@ -86,10 +94,10 @@ describe('buildTrayModel', () => {
     expect(model.items[0]?.text.endsWith('…')).toBe(true);
   });
 
-  it('caps the menu bar label length', () => {
+  it('keeps the menu bar label to one character however many sessions there are', () => {
     const sessions = Array.from({ length: 1000 }, (_, index) =>
-      session(`s${String(index)}`, 'working', 'busy'),
+      session(`s${String(index)}`, 'done_idle', 'finished'),
     );
-    expect(buildTrayModel(sessions).label.length).toBeLessThanOrEqual(20);
+    expect(buildTrayModel(sessions).label).toBe('●');
   });
 });

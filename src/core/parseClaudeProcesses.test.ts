@@ -38,6 +38,14 @@ describe('parseClaudeProcesses', () => {
     expect(parseClaudeProcesses(output)).toEqual([]);
   });
 
+  it('excludes the CLI the desktop app bundles and runs its own sessions with', () => {
+    const output = [
+      '  830     1 /Users/test/Library/Application Support/Claude/claude-code/2.1.260/claude.app/Contents/MacOS/claude --print',
+      '  831   830 /Applications/Claude.app/Contents/MacOS/claude',
+    ].join('\n');
+    expect(parseClaudeProcesses(output)).toEqual([]);
+  });
+
   it('recognises npm-style invocations run through node', () => {
     const output = '  700   310 node /Users/test/lib/node_modules/@anthropic-ai/claude-code/cli.js';
     expect(parseClaudeProcesses(output).map((entry) => entry.pid)).toEqual([700]);

@@ -75,9 +75,10 @@ npm run tauri dev
 
 ## Tray
 
-- [ ] The menu bar shows the aggregate (`3▶ 2⏸ 1✔`) and it changes within a second or two of a
-      session changing state.
-- [ ] With nothing running it reads `idle`.
+- [ ] The menu bar shows `●` within a second or two of a session stopping (needing input or
+      finishing), and clears again within a second or two of it going back to work.
+- [ ] It carries no number, whether one session is waiting or ten.
+- [ ] With nothing waiting — nothing running at all, or everything mid-turn — it is icon only.
 - [ ] The dropdown opens with the summary in words, then the sessions, glyph first.
 - [ ] Clicking a session in the dropdown does the same thing as clicking its row.
 - [ ] With more than ten active sessions the dropdown lists ten and then `…and N more in the panel`.

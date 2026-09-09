@@ -1,5 +1,5 @@
 import { countSessionStates } from './countSessionStates';
-import { formatAggregate } from './formatAggregate';
+import { formatTrayLabel } from './formatTrayLabel';
 import { sessionDisplayTitle } from './sessionDisplayTitle';
 import type { Session, SessionState } from './types';
 
@@ -11,7 +11,7 @@ export interface TrayMenuItem {
 
 /** Everything the tray shows, as plain strings the imperative shell hands to the native menu. */
 export interface TrayModel {
-  /** Menu bar label, e.g. `3▶ 2⏸ 1✔`. */
+  /** Menu bar label: `●` when something is waiting on the user, otherwise empty. */
   readonly label: string;
   /** First (disabled) dropdown line, spelled out because a menu has room for words. */
   readonly summary: string;
@@ -19,9 +19,6 @@ export interface TrayModel {
   /** How many sessions the dropdown had to leave out; 0 when it listed them all. */
   readonly overflow: number;
 }
-
-/** macOS truncates long menu bar text, and the label competes with every other tray icon. */
-const MAX_LABEL_LENGTH = 20;
 
 /** Beyond this the dropdown stops being scannable; the panel is where the full list lives. */
 const MAX_ITEMS = 10;
@@ -53,15 +50,14 @@ const summarise = (sessions: readonly Session[]): string => {
 /**
  * Derives the whole tray surface from the session list.
  *
- * `ended` sessions are excluded to stay consistent with `countSessionStates`, which leaves them
- * out of the aggregate: a dropdown listing a session the label does not count reads as a bug.
- * The panel still shows them (dimmed), because there the ordering makes it obvious they are done.
+ * `ended` sessions are excluded, matching `countSessionStates` and the panel's `visibleSessions`:
+ * the process is gone, so there is nothing left to click through to.
  */
 export const buildTrayModel = (sessions: readonly Session[]): TrayModel => {
   const active = sessions.filter((session) => session.state !== 'ended');
 
   return {
-    label: truncate(formatAggregate(countSessionStates(sessions)), MAX_LABEL_LENGTH),
+    label: formatTrayLabel(countSessionStates(sessions)),
     summary: summarise(sessions),
     items: active.slice(0, MAX_ITEMS).map((session) => ({
       sessionId: session.sessionId,
