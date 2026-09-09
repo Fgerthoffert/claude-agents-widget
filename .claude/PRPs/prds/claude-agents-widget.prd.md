@@ -43,10 +43,10 @@ We'll know we're right when the user can locate and return to any of 10 concurre
 
 ## Open Questions
 
-- [ ] Is an Apple Developer account available for code signing + notarization of release builds? (Unsigned builds require right-click-open / `xattr` workaround.)
+- [x] Is an Apple Developer account available for code signing + notarization of release builds? **Resolved without an answer (Phase 5, ADR-0009):** both paths are implemented. `release.yml` signs and notarizes only when all six Apple secrets are present, and otherwise publishes a working unsigned `.dmg`; the Gatekeeper workaround (right-click → Open, or `xattr -dr com.apple.quarantine`) is documented in the README, the generated release notes and the workflow summary. Answering the question later costs six repository secrets and no code change.
 - [ ] Which terminal app(s) does the user actually use day-to-day? v1 targets Terminal.app, iTerm2, and VS Code integrated terminal; others (Warp, Ghostty, Kitty, tmux panes) prioritized by real usage. Extra weight now: claude-status's click-to-focus failed in that environment — knowing the exact terminal(s) tells us which adapter to harden first (and possibly why claude-status failed).
 - [ ] Do Claude Code sessions launched from the Claude Desktop app (local execution) fire hooks and write transcripts identically to CLI sessions? (Expected yes — needs a 30-minute spike.)
-- [ ] Hook installation UX: auto-merge into `~/.claude/settings.json` with explicit user consent, or print instructions for manual install?
+- [x] Hook installation UX: auto-merge into `~/.claude/settings.json` with explicit user consent, or print instructions for manual install? **Resolved (Phase 5, ADR-0009):** auto-merge with informed consent, from inside the app. The setup view and the empty state name the file, state that existing hooks are kept and a backup is written, list the events to be added and offer a "show the change" dry run before the button. A `settings.json` that cannot be parsed is refused, never repaired. `npm run install-hooks` remains for developers.
 - [ ] How to disambiguate two sessions in the same project directory (path-encoding collision) — session ID from hook payload should resolve this; verify.
 
 ---
@@ -143,13 +143,13 @@ Menu bar icon + floating always-on-top panel listing every local Claude Code ses
   PRP: link to generated plan file once created
 -->
 
-| #   | Phase               | Description                                                                                                         | Status   | Parallel | Depends | PRP Plan                                              |
-| --- | ------------------- | ------------------------------------------------------------------------------------------------------------------- | -------- | -------- | ------- | ----------------------------------------------------- |
-| 1   | Scaffold & harness  | Tauri 2 + TS project, lint/format/typecheck, Vitest, CLAUDE.md, ADR seed, PR test workflow                          | complete | -        | -       | [plan](../plans/phase-1-scaffold-and-harness.plan.md) |
-| 2   | Detection core      | Hook CLI + installer, session state files, FS watcher, process scanner, reconciled session store with state machine | complete | -        | 1       | [plan](../plans/phase-2-detection-core.plan.md)       |
-| 3   | UI surfaces         | Menu bar tray + dropdown, always-on-top floating panel, needs-input emphasis, launch at login                       | complete | with 4   | 2       | [plan](../plans/phase-3-ui-surfaces.plan.md)          |
-| 4   | Focus engine        | Process-tree app identification, per-app focus adapters (Terminal.app, iTerm2, VS Code)                             | complete | with 3   | 2       | [plan](../plans/phase-4-focus-engine.plan.md)         |
-| 5   | Packaging & release | Dev-build-on-main workflow, release workflow (sign/notarize if possible), first-run permission guide, docs          | pending  | -        | 3, 4    | -                                                     |
+| #   | Phase               | Description                                                                                                         | Status   | Parallel | Depends | PRP Plan                                               |
+| --- | ------------------- | ------------------------------------------------------------------------------------------------------------------- | -------- | -------- | ------- | ------------------------------------------------------ |
+| 1   | Scaffold & harness  | Tauri 2 + TS project, lint/format/typecheck, Vitest, CLAUDE.md, ADR seed, PR test workflow                          | complete | -        | -       | [plan](../plans/phase-1-scaffold-and-harness.plan.md)  |
+| 2   | Detection core      | Hook CLI + installer, session state files, FS watcher, process scanner, reconciled session store with state machine | complete | -        | 1       | [plan](../plans/phase-2-detection-core.plan.md)        |
+| 3   | UI surfaces         | Menu bar tray + dropdown, always-on-top floating panel, needs-input emphasis, launch at login                       | complete | with 4   | 2       | [plan](../plans/phase-3-ui-surfaces.plan.md)           |
+| 4   | Focus engine        | Process-tree app identification, per-app focus adapters (Terminal.app, iTerm2, VS Code)                             | complete | with 3   | 2       | [plan](../plans/phase-4-focus-engine.plan.md)          |
+| 5   | Packaging & release | Dev-build-on-main workflow, release workflow (sign/notarize if possible), first-run permission guide, docs          | complete | -        | 3, 4    | [plan](../plans/phase-5-packaging-and-release.plan.md) |
 
 ### Phase Details
 

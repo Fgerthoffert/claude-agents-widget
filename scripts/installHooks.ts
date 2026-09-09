@@ -6,6 +6,7 @@
 // Written in TypeScript and executed through Node's type stripping so it can share the tested
 // pure merge function in src/core rather than reimplementing it — see ADR-0006.
 
+import { once } from 'node:events';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -54,10 +55,27 @@ const readSettings = (path: string): ClaudeSettings => {
   return parsed as ClaudeSettings;
 };
 
+/**
+ * Asks, and treats every non-answer as "no".
+ *
+ * A non-TTY stdin is refused up front rather than prompted: `question` would never settle,
+ * the event loop would empty with the top-level `await` still pending, and Node would exit 13
+ * with "Detected unsettled top-level await" instead of saying anything useful. An EOF (Ctrl-D)
+ * closes the interface without answering, which is raced for the same reason.
+ */
 const confirm = async (): Promise<boolean> => {
+  if (!process.stdin.isTTY) {
+    out('Standard input is not a terminal, so there is nobody to ask.');
+    out('Re-run with --dry-run to preview the change, or --yes to apply it non-interactively.');
+    return false;
+  }
+
   const readline = createInterface({ input: process.stdin, output: process.stdout });
   try {
-    const answer = await readline.question('Apply these changes? [y/N] ');
+    const answer = await Promise.race([
+      readline.question('Apply these changes? [y/N] '),
+      once(readline, 'close').then(() => ''),
+    ]);
     return /^y(es)?$/i.test(answer.trim());
   } finally {
     readline.close();

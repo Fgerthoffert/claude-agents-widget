@@ -1,0 +1,65 @@
+# Changelog
+
+All notable changes to this project are recorded here. The format follows
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
+[semantic versioning](https://semver.org/spec/v2.0.0.html), and everything below `1.0.0` is a
+pre-release where anything may still change.
+
+Per-release notes are also generated from the commit history and published on each
+[GitHub Release](https://github.com/Fgerthoffert/claude-agents-widget/releases).
+
+## [Unreleased]
+
+## [0.1.0] — 2026-09-09
+
+First installable snapshot: a menu bar icon and an always-on-top panel that show every local Claude
+Code session and jump to the window that owns it.
+
+### Added
+
+- **Session detection**, hybrid and reconciled into one list. A zero-dependency Claude Code hook
+  script writes per-session JSON state files that the app watches (precise, ~1s), and a 5-second
+  `ps`/`lsof`/transcript sweep discovers sessions the hooks never saw and notices dead ones. The
+  hook never writes to stdout, always exits 0 and logs its own failures, so it cannot break the
+  session it runs in.
+- **Session names** taken from Claude Code's own `custom-title`/`ai-title` transcript records, with
+  a truncated first prompt as the fallback — the identification the panel is built around.
+- **Always-on-top floating panel**: 32px rows, split into "Running" and "Waiting for you", ✋/🔄/✅
+  state glyphs, one loud state (`needs input`), separate glyphs for processing time and idle time,
+  a legend, whole-surface dragging, and position and size persisted across restarts and clamped
+  back onto an attached display.
+- **Menu bar icon** with the aggregate label (`3▶ 2⏸ 1✔`), a dropdown of up to ten sessions,
+  `Show/Hide Panel`, `Setup / Diagnostics`, `Launch at Login` and `Quit`.
+- **Click-to-focus** with an ordered degradation chain, so a click is never a no-op: exact window
+  for VS Code, VS Code Insiders and Cursor (via Accessibility), matching surface for Ghostty,
+  matching tty tab for Terminal.app and iTerm2, and plain activation for everything else. Every
+  value interpolated into an AppleScript is escaped, and `osascript` invocations are pinned to a
+  marker prefix in the capability allowlist.
+- **First-run setup view** in the panel, reachable at any time from the tray: one-click hook
+  installation with explicit consent and a "show the change" dry run, deep links to the Automation
+  and Accessibility panes with an explanation of what each is for, and a copyable, anonymous
+  diagnostics dump.
+- **Hook installer CLI** (`npm run install-hooks`) with `--dry-run` and `--yes`, which merges
+  rather than overwrites, backs up `settings.json` first, and refuses a file it cannot parse.
+- **CI/CD**: a shared quality gate (lint, typecheck, format, tests with a ≥85% `src/core` coverage
+  threshold, version consistency) on every PR; an `aarch64` dev build artifact on every merge to
+  `main`; and a tagged release workflow that generates notes from conventional commits and signs
+  and notarizes only if Apple credentials are configured.
+
+### Known limitations
+
+- Release builds are **unsigned and not notarized**, so the first launch needs a right-click → Open
+  or `xattr -dr com.apple.quarantine`. See
+  [ADR-0009](docs/adr/0009-release-and-first-run-strategy.md).
+- **Apple Silicon only** (`aarch64`). Intel and universal builds work from source but are not
+  published.
+- Two sessions in the **same** VS Code window cannot be told apart by the focus engine; VS Code
+  exposes no way to select an integrated-terminal tab.
+- Terminal.app and iTerm2 focus scripts are dictionary- and compile-verified but have not been
+  exercised against live sessions; see [docs/focus-test-matrix.md](docs/focus-test-matrix.md).
+- Per-session state files in `~/.claude-agents-widget/sessions/` are never pruned.
+- Claude Desktop chat sessions, token/usage tracking, git branch per row and tmux panes are all out
+  of scope for v1.
+
+[Unreleased]: https://github.com/Fgerthoffert/claude-agents-widget/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Fgerthoffert/claude-agents-widget/releases/tag/v0.1.0

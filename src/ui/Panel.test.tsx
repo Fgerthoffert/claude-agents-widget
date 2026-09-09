@@ -41,6 +41,13 @@ const rowByName = (name: RegExp): HTMLElement => screen.getByRole('button', { na
 
 beforeEach(() => {
   mocks.onSessionClick.mockReset();
+  // The panel records the outcome of every click, so the mock has to answer with one.
+  mocks.onSessionClick.mockResolvedValue({
+    ok: true,
+    method: 'window',
+    permissionDenied: false,
+    detail: 'window',
+  });
   mocks.togglePanelVisibility.mockReset();
 });
 
@@ -187,11 +194,12 @@ describe('Panel', () => {
     expect(mocks.onSessionClick).toHaveBeenCalledTimes(1);
   });
 
-  it('renders the empty state with the hook-install hint when nothing is detected', () => {
+  it('offers a one-click hook install from the empty state when nothing is detected', () => {
     renderPanel([]);
 
     expect(screen.getByText('No Claude Code sessions detected')).toBeInTheDocument();
-    expect(screen.getByText('npm run install-hooks')).toBeInTheDocument();
+    // A packaged app has no repository and no npm, so the fix has to be a button.
+    expect(screen.getByRole('button', { name: 'Install hook' })).toBeInTheDocument();
     expect(screen.queryAllByRole('listitem')).toHaveLength(0);
   });
 

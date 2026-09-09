@@ -1,4 +1,4 @@
-# UI smoke checklist (Phase 3)
+# UI smoke checklist
 
 Everything here needs a real window, a real menu bar and, in places, a second monitor — so none
 of it runs in CI. Work through it after `npm run tauri dev` (or a `--no-bundle` release build) and
@@ -27,8 +27,8 @@ npm run tauri dev
 - [ ] Press and drag the **header**: the panel moves.
 - [ ] Press and drag the panel's **background** (the padding around the list, or the empty state):
       the panel moves.
-- [ ] **Single-click a row**: it does _not_ move the panel. Until Phase 4 lands it logs
-      `focus engine not installed yet` in the webview console — that is the expected stub.
+- [ ] **Single-click a row**: it does _not_ move the panel; it raises that session's window (see
+      `docs/focus-test-matrix.md` for what "raises" means per app).
 - [ ] Press on a row and drag: the panel does _not_ move (rows are outside the drag region).
 - [ ] **Double-click the header**: nothing happens (no maximize).
 - [ ] Drag the panel from the built-in display to a second monitor and back. Movement is smooth,
@@ -61,7 +61,8 @@ npm run tauri dev
 - [ ] Ages count up once a second and are single-unit (`12s` → `59s` → `1m` → `4m`).
 - [ ] A scanner-discovered session (start a session, then `npm run install-hooks` was never run,
       or kill the hook dir) shows no age rather than a fake one.
-- [ ] An ended session dims at the bottom of the list and disappears about five minutes later.
+- [ ] An ended session (close its terminal) disappears from the panel rather than lingering —
+      ADR-0008's revision overturned the original "dim it at the bottom" decision.
 - [ ] Toggle macOS Appearance between Light and Dark: both are legible; nothing is grey-on-grey.
 
 ## Tray
@@ -82,6 +83,45 @@ npm run tauri dev
 - [ ] Check it → `~/Library/LaunchAgents/` gains a plist for the app.
 - [ ] Log out and back in: the app starts, the panel appears where it was left.
 - [ ] Uncheck it → the plist is removed.
+
+## First run and setup (Phase 5)
+
+Needs a machine where the hooks are **not** installed. Do not test this by removing your real
+hooks: use a throwaway account, or move `~/.claude/settings.json` aside and put it back afterwards.
+
+- [ ] With no widget entries in `~/.claude/settings.json`, the panel opens on the **Setup** view,
+      not on the session list — and it does not flash the session list first.
+- [ ] Step 1 names `~/.claude/settings.json`, says existing hooks are kept and a backup is written,
+      and lists the five events it will add.
+- [ ] **Show the change** prints the JSON that would be written; hiding it again works.
+- [ ] **Install hooks** → the button reads `Installing…`, then a sentence appears saying how many
+      events were registered and that running sessions need a restart.
+- [ ] `~/.claude-agents-widget/hook.mjs` exists and is byte-identical to `hooks/claude-agents-widget-hook.mjs`.
+- [ ] `~/.claude/settings.json.claude-agents-widget.bak` exists and is the **pre-install** file.
+- [ ] Any hooks you already had are still there, unmodified.
+- [ ] Pressing **Install hooks** again reports "already installed" and changes nothing.
+- [ ] With a deliberately corrupted `settings.json` (`echo '{' > …`), step 1 reads `blocked`, offers
+      no install button, and the file is left exactly as it was.
+- [ ] Start a fresh Claude Code session: step 3 flips to `done` and the row appears in the panel.
+- [ ] The **empty state** (no sessions, no hooks) shows an `Install hook` button — not a terminal
+      command. Once the hooks are in and nothing is running, it reads "No agents running right now".
+- [ ] Tray → `Setup / Diagnostics` reopens the view and reveals the panel if it was hidden.
+- [ ] `Done` returns to the session list and stays there.
+- [ ] **Open Automation** and **Open Accessibility** each open the right System Settings pane.
+- [ ] With Accessibility **not** granted, click a row: it raises the app, and step 2 flips to
+      `blocked` naming `permission-denied`. Grant it, click again: step 2 flips to `done`.
+- [ ] **Copy diagnostics** puts a readable block on the clipboard containing the app version and
+      the hook status — and **no session titles or project paths**.
+
+## Installed-app checks (a real `.dmg`)
+
+- [ ] The `.dmg` mounts, the app copies to `/Applications`.
+- [ ] A plain double-click is refused by Gatekeeper; right-click → **Open** → **Open** works, and so
+      does `xattr -dr com.apple.quarantine`.
+- [ ] The installed app's Setup view can install the hooks — this is the path that proves
+      `bundle.resources` shipped the hook script (a failure here reports `hook-resource-missing`).
+- [ ] After replacing the app with a newer build, the Accessibility grant has to be given again —
+      expected, and warned about in step 2.
 
 ## Footprint (PRD targets)
 

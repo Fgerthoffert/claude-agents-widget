@@ -1,0 +1,37 @@
+name: Quality
+
+# The one definition of the quality gate, called by pr.yml, main.yml and release.yml so a
+# release cannot be built on anything a PR would have rejected.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Lint, typecheck, format & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      - run: npm run format:check
+
+      # Coverage thresholds are enforced by vitest.config.ts.
+      - run: npm run test
+
+      # package.json, tauri.conf.json and Cargo.toml must agree on the version at all times,
+      # not only at release: a drift found on a PR is a one-line fix, found at tag time it is a
+      # retag.
+      - run: npm run check-versions

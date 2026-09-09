@@ -8,6 +8,7 @@
   --state-needs-input-wash: rgb(217 119 6 / 12%);
   --state-working: #0a84ff;
   --state-done-idle: #8e8e93;
+  --state-ok: #248a3d;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -21,6 +22,7 @@
     --state-needs-input-wash: rgb(255 159 10 / 16%);
     --state-working: #409cff;
     --state-done-idle: #8e8e93;
+    --state-ok: #30d158;
   }
 }
 
@@ -193,6 +195,21 @@ body {
   font-size: 10.5px;
 }
 
+.panel__empty-link {
+  padding: 0;
+  border: 0;
+  font: inherit;
+  font-size: 10.5px;
+  text-decoration: underline;
+  color: var(--panel-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.panel__empty-link:hover {
+  color: var(--panel-fg);
+}
+
 /* ---- Row: [dot] title / detail ............ age ----------------------------------------- */
 
 .row {
@@ -354,4 +371,189 @@ body {
 .panel__legend-item--active {
   font-weight: 600;
   color: var(--state-working);
+}
+
+/* ---- Setup / diagnostics: the first-run guide, in the same 320px panel ------------------ */
+
+.setup {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.setup__scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  padding: 6px 10px 8px;
+}
+
+.setup__intro {
+  margin: 0 0 9px;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--panel-muted);
+}
+
+.setup__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.setup__step {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.setup__step-head {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.setup__step-index {
+  display: flex;
+  width: 14px;
+  height: 14px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--panel-bg);
+  background: var(--panel-muted);
+}
+
+.setup__step-title {
+  margin: 0;
+  flex: 1;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.setup__chip {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 8.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--panel-muted);
+  background: var(--panel-hover);
+}
+
+.setup__chip--done {
+  color: var(--state-ok);
+}
+
+.setup__chip--todo {
+  color: var(--state-working);
+}
+
+.setup__chip--blocked {
+  color: var(--state-needs-input);
+  background: var(--state-needs-input-wash);
+}
+
+.setup__step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-left: 20px;
+}
+
+.setup__text {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+
+.setup__muted {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--panel-muted);
+}
+
+.setup__step-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9.5px;
+  overflow-wrap: anywhere;
+}
+
+.setup__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.setup__button {
+  flex: none;
+  padding: 3px 9px;
+  border: 1px solid var(--panel-border);
+  border-radius: 5px;
+  font: inherit;
+  font-size: 10.5px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.setup__button:hover:not(:disabled) {
+  background: var(--panel-hover);
+}
+
+.setup__button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.setup__button--primary {
+  border-color: transparent;
+  font-weight: 600;
+  color: #fff;
+  background: var(--state-working);
+}
+
+.setup__preview {
+  overflow: auto;
+  max-height: 130px;
+  margin: 4px 0 0;
+  padding: 6px;
+  border-radius: 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  line-height: 1.35;
+  background: var(--panel-hover);
+  /* The one place in the panel where reading the exact text matters more than not selecting it. */
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.setup__outcome {
+  margin: 4px 0 0;
+  padding: 4px 6px;
+  border-radius: 5px;
+  font-size: 10px;
+  line-height: 1.4;
+  background: var(--panel-hover);
+}
+
+.setup__footer {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-top: 1px solid var(--panel-border);
 }

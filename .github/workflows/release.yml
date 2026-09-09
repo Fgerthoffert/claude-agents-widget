@@ -1,0 +1,155 @@
+name: Release
+
+# A `v*` tag builds the app and publishes a GitHub Release with the .dmg attached.
+#
+# Signing and notarization happen only if the Apple secrets exist. With none configured — the
+# default — this produces a working, unsigned .dmg and the release notes tell the user how to
+# get past Gatekeeper (ADR-0009).
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build and release, e.g. v0.1.0'
+        required: true
+        type: string
+
+# Never cancel a release in flight: a half-uploaded release is worse than a slow one.
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
+
+  release:
+    name: Build & publish
+    needs: quality
+    runs-on: macos-latest
+    permissions:
+      # The only job in the repository allowed to write: it creates the release.
+      contents: write
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.sha }}
+          # Full history and tags: the release notes are the commits since the previous tag.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable, 2026-09-03
+        with:
+          toolchain: stable
+          targets: aarch64-apple-darwin
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      # Fails the release loudly if the tag does not name the version in package.json,
+      # tauri.conf.json and Cargo.toml. Nothing is built until it passes.
+      - name: Check the tag against the version
+        id: version
+        run: npm run check-versions -- --tag "$TAG"
+
+      - name: Decide whether we can sign
+        id: apple
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "$APPLE_CERTIFICATE" ] && [ -n "$APPLE_CERTIFICATE_PASSWORD" ] \
+            && [ -n "$APPLE_SIGNING_IDENTITY" ] && [ -n "$APPLE_ID" ] \
+            && [ -n "$APPLE_PASSWORD" ] && [ -n "$APPLE_TEAM_ID" ]; then
+            echo 'signing=true' >> "$GITHUB_OUTPUT"
+            echo 'Apple credentials present: the build will be signed and notarized.'
+          else
+            echo 'signing=false' >> "$GITHUB_OUTPUT"
+            echo 'No Apple credentials: building unsigned (see ADR-0009).'
+          fi
+
+      # The notes say something different for a signed build, so they are generated after the
+      # decision above. Multi-line values reach an action input intact via $GITHUB_ENV.
+      - name: Generate release notes
+        env:
+          SIGNED: ${{ steps.apple.outputs.signing }}
+        run: |
+          {
+            echo 'RELEASE_NOTES<<RELEASE_NOTES_EOF'
+            if [ "$SIGNED" = 'true' ]; then
+              npm run --silent release-notes -- --tag "$TAG" --signed
+            else
+              npm run --silent release-notes -- --tag "$TAG"
+            fi
+            echo 'RELEASE_NOTES_EOF'
+          } >> "$GITHUB_ENV"
+
+      # Two build steps rather than one with conditional env, because tauri-bundler reads the
+      # Apple variables with `var_os` — an empty string is "set" to it, and it would try to
+      # import an empty certificate and fail. The unset variable is the only safe "off".
+      - name: Build, sign, notarize & publish
+        id: signed
+        if: steps.apple.outputs.signing == 'true'
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          tagName: ${{ env.TAG }}
+          releaseName: Claude Agents Widget ${{ steps.version.outputs.version }}
+          releaseBody: ${{ env.RELEASE_NOTES }}
+          releaseDraft: false
+          prerelease: ${{ steps.version.outputs.prerelease }}
+          args: --target aarch64-apple-darwin
+          # No updater is configured, so there is no latest.json to publish.
+          uploadUpdaterJson: false
+          retryAttempts: 1
+
+      - name: Build & publish (unsigned)
+        id: unsigned
+        if: steps.apple.outputs.signing != 'true'
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ env.TAG }}
+          releaseName: Claude Agents Widget ${{ steps.version.outputs.version }}
+          releaseBody: ${{ env.RELEASE_NOTES }}
+          releaseDraft: false
+          prerelease: ${{ steps.version.outputs.prerelease }}
+          args: --target aarch64-apple-darwin
+          uploadUpdaterJson: false
+          retryAttempts: 1
+
+      - name: Summarise
+        env:
+          URL: ${{ steps.signed.outputs.releaseHtmlUrl || steps.unsigned.outputs.releaseHtmlUrl }}
+          SIGNED: ${{ steps.apple.outputs.signing }}
+        run: |
+          {
+            echo "### Released \`$TAG\` (aarch64, $([ "$SIGNED" = 'true' ] && echo signed || echo unsigned))"
+            echo
+            echo "$URL"
+          } >> "$GITHUB_STEP_SUMMARY"

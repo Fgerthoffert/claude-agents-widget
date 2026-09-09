@@ -14,11 +14,23 @@
     "store:default",
     "autostart:default",
     "process:allow-exit",
+    "core:app:allow-version",
     {
       "identifier": "fs:allow-read-text-file",
       "allow": [
         { "path": "$HOME/.claude-agents-widget/sessions/*" },
-        { "path": "$HOME/.claude/projects/*/*.jsonl" }
+        { "path": "$HOME/.claude/projects/*/*.jsonl" },
+        { "path": "$HOME/.claude/settings.json" },
+        { "path": "$HOME/.claude/settings.json.claude-agents-widget.bak" },
+        { "path": "$RESOURCE/hooks/*" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [
+        { "path": "$HOME/.claude/settings.json" },
+        { "path": "$HOME/.claude/settings.json.claude-agents-widget.bak" },
+        { "path": "$HOME/.claude-agents-widget/hook.mjs" }
       ]
     },
     {
@@ -40,12 +52,19 @@
       "identifier": "fs:allow-exists",
       "allow": [
         { "path": "$HOME/.claude-agents-widget/sessions" },
-        { "path": "$HOME/.claude/projects/*" }
+        { "path": "$HOME/.claude-agents-widget/hook.mjs" },
+        { "path": "$HOME/.claude/projects/*" },
+        { "path": "$HOME/.claude/settings.json" },
+        { "path": "$HOME/.claude/settings.json.claude-agents-widget.bak" }
       ]
     },
     {
       "identifier": "fs:allow-mkdir",
-      "allow": [{ "path": "$HOME/.claude-agents-widget/sessions" }]
+      "allow": [
+        { "path": "$HOME/.claude-agents-widget" },
+        { "path": "$HOME/.claude-agents-widget/sessions" },
+        { "path": "$HOME/.claude" }
+      ]
     },
     {
       "identifier": "fs:allow-watch",
@@ -92,6 +111,11 @@
           "name": "open-bundle-path",
           "cmd": "/usr/bin/open",
           "args": ["-b", { "validator": "[A-Za-z0-9][A-Za-z0-9._-]*" }, { "validator": "/[^\\n]*" }]
+        },
+        {
+          "name": "open-settings-pane",
+          "cmd": "/usr/bin/open",
+          "args": [{ "validator": "x-apple\\.systempreferences:[A-Za-z0-9._?=&-]+" }]
         }
       ]
     }

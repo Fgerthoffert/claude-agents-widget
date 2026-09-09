@@ -80,7 +80,19 @@ export const PanelPreview = () => {
           }}
         />
         {groups.running.length === 0 && groups.waiting.length === 0 ? (
-          <EmptyState />
+          <EmptyState
+            hooksInstalled={false}
+            busy={false}
+            outcome={null}
+            onInstall={() => {
+              setLastAction(
+                'Install clicked: the real panel would merge the hooks into ~/.claude/settings.json.',
+              );
+            }}
+            onOpenSetup={() => {
+              setLastAction('Setup clicked: the real panel would open the setup view.');
+            }}
+          />
         ) : (
           <div className="panel__groups">
             {groups.running.length > 0 && (
