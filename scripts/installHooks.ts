@@ -64,7 +64,7 @@ const readSettings = (path: string): ClaudeSettings => {
  * closes the interface without answering, which is raced for the same reason.
  */
 const confirm = async (): Promise<boolean> => {
-  if (process.stdin.isTTY !== true) {
+  if (!process.stdin.isTTY) {
     out('Standard input is not a terminal, so there is nobody to ask.');
     out('Re-run with --dry-run to preview the change, or --yes to apply it non-interactively.');
     return false;

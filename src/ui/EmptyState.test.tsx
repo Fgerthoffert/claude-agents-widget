@@ -26,7 +26,7 @@ describe('EmptyState', () => {
   it('says what the install will touch before the user presses it', () => {
     renderEmpty();
 
-    const hint = screen.getByText(/hooks are not installed yet/).textContent ?? '';
+    const hint = screen.getByText(/hooks are not installed yet/).textContent;
     expect(hint).toContain('~/.claude/settings.json');
     expect(hint).toContain('keeps your existing hooks');
     expect(hint).toContain('backs the file up');

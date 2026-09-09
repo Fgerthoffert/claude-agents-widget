@@ -46,7 +46,7 @@ describe('SetupView', () => {
   it('names the file it will change and promises the backup before offering the button', () => {
     renderView();
 
-    const step = screen.getByText(/Adds 1 entry to/).textContent ?? '';
+    const step = screen.getByText(/Adds 1 entry to/).textContent;
     expect(step).toContain('/Users/test/.claude/settings.json');
     expect(step).toContain('existing hooks are kept');
     expect(step).toContain('backup');
