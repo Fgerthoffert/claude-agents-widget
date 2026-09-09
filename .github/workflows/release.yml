@@ -17,7 +17,7 @@ on:
 
 # Never cancel a release in flight: a half-uploaded release is worse than a slow one.
 concurrency:
-  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  group: release-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 permissions:
@@ -35,11 +35,11 @@ jobs:
       # The only job in the repository allowed to write: it creates the release.
       contents: write
     env:
-      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+      TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.sha }}
           # Full history and tags: the release notes are the commits since the previous tag.
           fetch-depth: 0
 
