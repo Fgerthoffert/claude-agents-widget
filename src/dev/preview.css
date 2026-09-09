@@ -1,0 +1,134 @@
+/* Dev-only chrome around the real panel. Nothing here ships in the app bundle. */
+
+body {
+  overflow: auto;
+  padding: 24px;
+  color: #1b1b1f;
+  background: #e9e9ee;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    color: #f2f2f4;
+    background: #101014;
+  }
+}
+
+.preview {
+  display: flex;
+  max-width: 1100px;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+.preview__title {
+  margin: 0;
+  font-size: 15px;
+}
+
+.preview__note {
+  max-width: 62ch;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.75;
+}
+
+.preview__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.preview__button {
+  padding: 5px 10px;
+  border: 1px solid currentcolor;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.preview__button:hover {
+  opacity: 0.9;
+}
+
+.preview__button--active {
+  font-weight: 600;
+  opacity: 1;
+}
+
+.preview__stage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+}
+
+.preview__slot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview__label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.6;
+}
+
+/* The panel is sized here exactly as `tauri.conf.json` sizes the real window. */
+.preview__frame {
+  width: 320px;
+  height: 400px;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 25%);
+}
+
+.preview__frame--tall {
+  height: 560px;
+}
+
+/* Mirrors the dark tokens in panel.css so both themes can be compared side by side without
+   changing the system appearance. Keep in sync if the palette changes. */
+.preview__frame--dark {
+  --panel-bg: #1c1c20;
+  --panel-fg: #f2f2f4;
+  --panel-muted: #9a9aa6;
+  --panel-border: #35353d;
+  --panel-hover: rgb(255 255 255 / 8%);
+  --state-needs-input: #ff9f0a;
+  --state-needs-input-wash: rgb(255 159 10 / 16%);
+  --state-working: #409cff;
+  --state-done-idle: #8e8e93;
+
+  color: var(--panel-fg);
+}
+
+.preview__frame--light {
+  --panel-bg: #f7f7f8;
+  --panel-fg: #1b1b1f;
+  --panel-muted: #6b6b76;
+  --panel-border: #d3d3da;
+  --panel-hover: rgb(0 0 0 / 6%);
+  --state-needs-input: #d97706;
+  --state-needs-input-wash: rgb(217 119 6 / 12%);
+  --state-working: #0a84ff;
+  --state-done-idle: #8e8e93;
+
+  color: var(--panel-fg);
+}
+
+.preview__log {
+  min-height: 34px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  background: rgb(127 127 127 / 18%);
+}

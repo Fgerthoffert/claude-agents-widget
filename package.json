@@ -19,7 +19,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
-    "install-hooks": "node --experimental-strip-types scripts/installHooks.ts"
+    "install-hooks": "node --experimental-strip-types scripts/installHooks.ts",
+    "preview:ui": "vite --port 1430 --open /preview.html"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",
