@@ -16,6 +16,7 @@
     "autostart:default",
     "process:allow-exit",
     "core:app:allow-version",
+    "log:default",
     {
       "identifier": "fs:allow-read-text-file",
       "allow": [

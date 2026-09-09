@@ -82,6 +82,7 @@ export const PanelPreview = () => {
         {groups.running.length === 0 && groups.waiting.length === 0 ? (
           <EmptyState
             hooksInstalled={false}
+            failure={null}
             busy={false}
             outcome={null}
             onInstall={() => {

@@ -8,12 +8,15 @@ import type { Session } from '../core/types';
 
 const mocks = vi.hoisted(() => ({
   sessions: { current: [] as Session[] },
+  health: { current: { failure: null as string | null, degraded: [] as string[] } },
   onSessionClick: vi.fn(),
   togglePanelVisibility: vi.fn(),
 }));
 
 // A fake store: the panel reads the same hook it does in production, we choose what it returns.
-vi.mock('./useSessions', () => ({ useSessions: () => mocks.sessions.current }));
+vi.mock('./useSessions', () => ({
+  useSessions: () => ({ sessions: mocks.sessions.current, health: mocks.health.current }),
+}));
 vi.mock('./onSessionClick', () => ({ onSessionClick: mocks.onSessionClick }));
 vi.mock('./togglePanelVisibility', () => ({ togglePanelVisibility: mocks.togglePanelVisibility }));
 vi.mock('./startWindowDrag', () => ({ startWindowDrag: vi.fn(() => Promise.resolve()) }));
@@ -34,8 +37,9 @@ const session = (overrides: Partial<Session> & { readonly sessionId: string }): 
   ...overrides,
 });
 
-const renderPanel = (sessions: readonly Session[]): void => {
+const renderPanel = (sessions: readonly Session[], failure: string | null = null): void => {
   mocks.sessions.current = [...sessions];
+  mocks.health.current = { failure, degraded: [] };
   render(<Panel />);
 };
 
@@ -203,6 +207,14 @@ describe('Panel', () => {
     // A packaged app has no repository and no npm, so the fix has to be a button.
     expect(screen.getByRole('button', { name: 'Install hook' })).toBeInTheDocument();
     expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+  });
+
+  it('says detection is broken rather than idle when the sweep is failing', () => {
+    renderPanel([], 'Watching the hook state directory failed: fs.watch not allowed');
+
+    expect(screen.getByText('Detection is not running')).toBeInTheDocument();
+    expect(screen.queryByText('No Claude Code sessions detected')).not.toBeInTheDocument();
+    expect(screen.queryByText('No agents running right now')).not.toBeInTheDocument();
   });
 
   it('drags the window when a press moves, from anywhere including over a row', async () => {

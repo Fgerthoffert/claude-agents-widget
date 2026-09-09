@@ -30,6 +30,9 @@ const renderView = (setup = state(), extra: Partial<Parameters<typeof SetupView>
   render(
     <SetupView
       setup={setup}
+      health={{ failure: null, degraded: [] }}
+      buildIdentity="v0.2.1 (abc1234)"
+      logPath="/Users/test/Library/Logs/app/claude-agents-widget.log"
       hookPath="/Users/test/.claude-agents-widget/hook.mjs"
       settingsPath="/Users/test/.claude/settings.json"
       preview={'{\n  "hooks": {}\n}'}
@@ -154,6 +157,38 @@ describe('SetupView', () => {
     renderView();
 
     expect(screen.getByText(/No agents running right now/)).toBeInTheDocument();
+  });
+
+  it('leads with a failing pipeline, because it invalidates every tick below it', () => {
+    renderView(state(), {
+      health: {
+        failure: 'Watching the hook state directory failed: fs.watch not allowed',
+        degraded: [],
+      },
+    });
+
+    const alert = screen.getByRole('alert');
+    expect(alert.textContent).toContain('Detection is not running');
+    expect(alert.textContent).toContain('fs.watch not allowed');
+    // The log is where the untruncated error lives, so the view has to name it.
+    expect(alert.textContent).toContain('/claude-agents-widget.log');
+  });
+
+  it('reports a degraded sweep without crying failure', () => {
+    renderView(state(), {
+      health: { failure: null, degraded: ['Scanning running Claude Code processes failed: EPERM'] },
+    });
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(document.querySelector('.setup__outcome')?.textContent).toContain(
+      'Detection is degraded. Scanning running Claude Code processes failed: EPERM',
+    );
+  });
+
+  it('shows the build identity, which is what a bug report needs', () => {
+    renderView();
+
+    expect(screen.getByText('v0.2.1 (abc1234)')).toHaveClass('setup__build');
   });
 
   it('offers the diagnostics dump and a way out', async () => {

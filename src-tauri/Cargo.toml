@@ -23,8 +23,16 @@ tauri = { version = "2", features = ["macos-private-api", "tray-icon", "image-pn
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # Detection core (phase 2): watching the session state dir and running `ps`.
-tauri-plugin-fs = "2"
+#
+# `watch` is NOT a default feature: without it `tauri_plugin_fs` never registers its `watch`
+# command, so `watchImmediate()` rejects with "command not found" at runtime while everything
+# still compiles and every jsdom test still passes. That is exactly what shipped in v0.2.0 and
+# it took the whole detection pipeline down with it (ADR-0011).
+tauri-plugin-fs = { version = "2", features = ["watch"] }
 tauri-plugin-shell = "2"
+# Failures must land somewhere a user can read without devtools (ADR-0011).
+tauri-plugin-log = "2"
+log = "0.4"
 # UI surfaces (phase 3): panel geometry persistence, Quit and launch-at-login from the
 # TypeScript tray menu.
 tauri-plugin-store = "2"

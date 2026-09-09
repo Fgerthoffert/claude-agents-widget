@@ -1,17 +1,29 @@
 import { useEffect, useSyncExternalStore } from 'react';
 
+import { describeDetectionFailure } from '../core/describeDetectionFailure';
 import { createSessionStore } from '../detection/createSessionStore';
+import { logDetection } from '../detection/logDetection';
 import { startDetection } from '../detection/startDetection';
-import type { Session } from '../core/types';
+import type { DetectionHealth, Session } from '../core/types';
 
 // One store per app, not per component: the detection pipeline is a singleton.
 const store = createSessionStore();
 
+export interface SessionsView {
+  readonly sessions: readonly Session[];
+  /** Why the list may be empty or stale. Presentation must never ignore this (ADR-0011). */
+  readonly health: DetectionHealth;
+}
+
 /**
  * Subscribes a component to the live session list, starting the detection pipeline on first
- * mount. Phase 3 builds the real panel and tray on this same hook.
+ * mount.
+ *
+ * The health snapshot rides along because the two are only meaningful together: an empty list
+ * with a healthy pipeline means "nothing running", and the same list with a failing one means
+ * "the widget is broken" — and the panel has to say which.
  */
-export const useSessions = (): readonly Session[] => {
+export const useSessions = (): SessionsView => {
   useEffect(() => {
     let stop: (() => void) | null = null;
     let cancelled = false;
@@ -22,7 +34,9 @@ export const useSessions = (): readonly Session[] => {
         else stop = dispose;
       })
       .catch((error: unknown) => {
-        console.error('failed to start detection', error);
+        const failure = describeDetectionFailure('startup', error);
+        void logDetection('error', failure);
+        store.setHealth({ failure, degraded: [] });
       });
 
     return () => {
@@ -31,5 +45,10 @@ export const useSessions = (): readonly Session[] => {
     };
   }, []);
 
-  return useSyncExternalStore(store.subscribe, store.getSessions);
+  // Two subscriptions rather than one composite snapshot: `useSyncExternalStore` demands a
+  // reference-stable value, which a freshly built object never is.
+  const sessions = useSyncExternalStore(store.subscribe, store.getSessions);
+  const health = useSyncExternalStore(store.subscribe, store.getHealth);
+
+  return { sessions, health };
 };

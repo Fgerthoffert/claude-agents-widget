@@ -2,10 +2,17 @@ import { useState } from 'react';
 
 import { SetupStep } from './SetupStep';
 import type { SetupState } from '../core/evaluateSetupState';
+import type { DetectionHealth } from '../core/types';
 import type { SystemSettingsPane } from '../detection/openSystemSettings';
 
 interface SetupViewProps {
   readonly setup: SetupState;
+  /** Whether sweeps are producing data. Shown before the checklist when they are not. */
+  readonly health: DetectionHealth;
+  /** Build identity (`v0.2.1 (abc1234)`), or `null` before the native layer answers. */
+  readonly buildIdentity: string | null;
+  /** Absolute path of the app log, or `null` outside the native shell. */
+  readonly logPath: string | null;
   readonly hookPath: string;
   readonly settingsPath: string;
   /** The `hooks` block an install would write; `null` when nothing would change. */
@@ -36,6 +43,9 @@ const list = (events: readonly string[]): string => events.join(', ');
  */
 export const SetupView = ({
   setup,
+  health,
+  buildIdentity,
+  logPath,
   hookPath,
   settingsPath,
   preview,
@@ -56,6 +66,25 @@ export const SetupView = ({
           Two one-time steps: let Claude Code tell the widget what your agents are doing, and let
           macOS raise their windows when you click a row.
         </p>
+
+        {/* Above the checklist: a broken pipeline invalidates every tick below it (ADR-0011). */}
+        {health.failure !== null && (
+          <p className="setup__outcome" role="alert">
+            <b>Detection is not running.</b> {health.failure}
+            {logPath !== null && (
+              <>
+                {' '}
+                The full error is in <code>{logPath}</code>.
+              </>
+            )}
+          </p>
+        )}
+        {health.failure === null &&
+          health.degraded.map((reason) => (
+            <p className="setup__outcome" key={reason}>
+              <b>Detection is degraded.</b> {reason}
+            </p>
+          ))}
 
         <ol className="setup__steps">
           <SetupStep index={1} title="Install the Claude Code hooks" status={hooks.status}>
@@ -174,6 +203,9 @@ export const SetupView = ({
       </div>
 
       <footer className="setup__footer">
+        <p className="setup__build" title={logPath ?? undefined}>
+          {buildIdentity ?? 'version unknown'}
+        </p>
         <button type="button" className="setup__button" onClick={onCopyDiagnostics}>
           Copy diagnostics
         </button>
