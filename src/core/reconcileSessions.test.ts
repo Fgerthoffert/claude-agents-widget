@@ -200,6 +200,95 @@ describe('reconcileSessions', () => {
     expect(sessions.every((session) => session.cwd === '/Users/test/proj')).toBe(true);
   });
 
+  it('keeps only the newest session per claude process', () => {
+    // /clear and /resume mint a new session id inside the same process; the one being replaced
+    // does not always get a SessionEnd, and its record would otherwise stay on screen.
+    const sessions = run({
+      hookRecords: [
+        record({ sessionId: 'abandoned', state: 'needs_input', updatedAt: at(-60_000) }),
+        record({ sessionId: 'current', state: 'working', updatedAt: at(-1_000) }),
+      ],
+      livePids: [411],
+    });
+
+    expect(sessions.map((session) => [session.sessionId, session.state])).toEqual([
+      ['current', 'working'],
+      ['abandoned', 'ended'],
+    ]);
+  });
+
+  it('resolves a same-timestamp collision the same way every sweep', () => {
+    const both = (ids: readonly string[]) =>
+      run({
+        hookRecords: ids.map((sessionId) => record({ sessionId, updatedAt: at(-1_000) })),
+        livePids: [411],
+      }).find((session) => session.state !== 'ended')?.sessionId;
+
+    expect(both(['a', 'b'])).toBe('b');
+    expect(both(['b', 'a'])).toBe('b');
+  });
+
+  it('leaves records without a claude pid out of the per-process comparison', () => {
+    const sessions = run({
+      hookRecords: [
+        record({ sessionId: 'one', claudePid: null, updatedAt: at(-60_000) }),
+        record({ sessionId: 'two', claudePid: null, updatedAt: at(-1_000) }),
+      ],
+    });
+
+    expect(sessions.every((session) => session.state === 'working')).toBe(true);
+  });
+
+  it('drops a scanned session whose process a hook record already owns', () => {
+    // The scanner reaches a session id by guessing which transcript a pid is writing. When a
+    // hook record already speaks for that pid, a wrong guess would double the process's rows.
+    const sessions = run({
+      hookRecords: [record({ sessionId: 'real', claudePid: 411 })],
+      scanned: [scan({ sessionId: 'guessed', claudePid: 411 })],
+      livePids: [411],
+    });
+
+    expect(sessions.map((session) => session.sessionId)).toEqual(['real']);
+  });
+
+  it('still adopts a scanned session once the hook record for its process has expired', () => {
+    const sessions = run({
+      hookRecords: [record({ sessionId: 'gone', state: 'ended', updatedAt: at(-6 * 60 * 1000) })],
+      scanned: [scan({ sessionId: 'reused', claudePid: 411 })],
+      livePids: [411],
+    });
+
+    expect(sessions.map((session) => session.sessionId)).toEqual(['reused']);
+  });
+
+  it('leaves out sessions the Claude desktop app owns', () => {
+    const desktop = record({
+      sessionId: 'desktop',
+      claudePid: 900,
+      ancestors: [
+        {
+          pid: 900,
+          comm: '/Users/test/Library/Application Support/Claude/claude-code/2.1.260/claude.app/Contents/MacOS/claude',
+          args: '/Users/test/Library/Application Support/Claude/claude-code/2.1.260/claude.app/Contents/MacOS/claude',
+        },
+      ],
+    });
+    const sessions = run({ hookRecords: [desktop, record()], livePids: [411, 900] });
+
+    expect(sessions.map((session) => session.sessionId)).toEqual(['sess-1']);
+  });
+
+  it('does not let a desktop record claim a pid a terminal session could still use', () => {
+    const desktop = record({
+      sessionId: 'desktop',
+      claudePid: 812,
+      ancestors: [{ pid: 812, comm: '/Applications/Claude.app/Contents/MacOS/Claude', args: '' }],
+    });
+    const sessions = run({ hookRecords: [desktop], scanned: [scan()], livePids: [812] });
+
+    expect(sessions.map((session) => session.sessionId)).toEqual(['sess-9']);
+  });
+
   it('reconciles a realistic mixed snapshot', () => {
     const sessions = run({
       hookRecords: [

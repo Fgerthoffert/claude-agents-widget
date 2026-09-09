@@ -145,7 +145,9 @@ export const useTray = (sessions: readonly Session[], actions: TrayActions): voi
         return;
       }
 
-      await tray.setTitle(model.label);
+      // null, not '', is how Tauri spells "no title at all" — an empty string leaves the label
+      // in place on some macOS versions, which would strand a `●` after the last session stopped.
+      await tray.setTitle(model.label === '' ? null : model.label);
       await tray.setTooltip(model.summary);
       await tray.setMenu(menu);
 

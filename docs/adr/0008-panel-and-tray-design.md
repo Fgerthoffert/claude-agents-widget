@@ -200,3 +200,28 @@ the panel exists to answer, so the layout now states it instead of leaving it to
 glyphs. Sections are content-sized up to their share of the panel and scroll independently, so a
 long list on one side cannot squeeze the other out of view; an empty section is omitted rather
 than heading an empty list. Order inside each section is still the store's.
+
+## Revision — 2026-09-09, the menu bar carries a mark, not a tally
+
+`formatAggregate` is gone. The menu bar label is now `formatTrayLabel`: `●` when any session is
+waiting on the user, and the empty string otherwise. The user's framing:
+
+> "Remove the numbers from the top bar, just have something to highlight if something is ready for
+> me to view."
+
+This overturns two things this ADR argued for. The label is no longer "the same string the panel
+header shows" — the header dropped counts in the first revision, and now the menu bar has too, so
+counts survive in exactly one place. And the 20-character cap is deleted along with the format it
+protected: a one-character label cannot be truncated.
+
+The reasoning behind the original counts was that the menu bar is free real estate, so it should
+carry the most information it can. That was the wrong axis. A tally has to be _read_ before it can
+be acted on, and the number it yields answers a question the user does not ask of the menu bar —
+they ask "is any of this mine to deal with?", which is a yes/no. Three digits and three glyphs to
+deliver one bit is a bad trade, and it made the icon change width as sessions came and went, which
+moves every tray icon to its right.
+
+`needs_input` and `done_idle` both raise the mark; `working` does not. That is the same split the
+panel's two sections use (`groupSessions`), so the mark and the "Waiting for you" heading can never
+disagree. The dropdown summary keeps its words (`2 need input · 3 working · 1 done`) — a menu has
+room to spell things out, and it is one click from the mark for anyone who wants the number.

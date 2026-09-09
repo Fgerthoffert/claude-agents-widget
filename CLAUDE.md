@@ -62,7 +62,7 @@ by commit SHA and every workflow has an explicit least-privilege `permissions:` 
 ## Conventions
 
 - Functional TypeScript. Arrow functions only — no `function` keyword, no classes (lint-enforced).
-- **One exported function per `.ts` file**, file named after the function (`formatAggregate.ts`).
+- **One exported function per `.ts` file**, file named after the function (`formatTrayLabel.ts`).
   Types that function owns may live alongside it. Convention, not lint-enforced.
   The exceptions are `src/core/types.ts` and `src/core/focus/types.ts`: shared shapes, no
   behaviour.

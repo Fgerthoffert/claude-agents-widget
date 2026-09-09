@@ -10,8 +10,8 @@ fire when one stops, but with five or ten agents they all look alike: you get a 
 knowing which agent sent it or where that window is. There is no single place that tells you who is
 running and who is blocked, and no quick way back to the right window.
 
-That is what this is: a menu bar icon with the aggregate state (`3▶ 2⏸ 1✔`) and a compact panel you
-can park on any monitor, above every other window. The panel is split into **Running** (the agent
+That is what this is: a menu bar icon that marks itself (`●`) the moment any agent is waiting on
+you, and a compact panel you can park on any monitor, above every other window. The panel is split into **Running** (the agent
 is busy, nothing is expected of you) and **Waiting for you** (it stopped — either it needs a
 decision or it finished). Clicking a row raises the terminal or editor window that agent lives in.
 

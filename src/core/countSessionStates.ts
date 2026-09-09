@@ -1,9 +1,15 @@
-import type { SessionCounts } from './formatAggregate';
 import type { Session } from './types';
 
+/** How many sessions sit in each bucket the tray cares about. */
+export interface SessionCounts {
+  readonly working: number;
+  readonly needsInput: number;
+  readonly doneIdle: number;
+}
+
 /**
- * Buckets sessions for the menu bar label. `ended` sessions are counted nowhere: they are on
- * their way out of the store and reporting them would inflate the aggregate.
+ * Buckets sessions for the tray. `ended` sessions are counted nowhere: they are on their way out
+ * of the store and reporting them would inflate the summary.
  */
 export const countSessionStates = (sessions: readonly Session[]): SessionCounts => ({
   working: sessions.filter((session) => session.state === 'working').length,
