@@ -24,8 +24,9 @@ npm run tauri dev
       floats over that full-screen Space: the Space must not change and the frontmost app must stay
       the full-screen one. One click, not two, must reach the panel (`acceptFirstMouse`).
 - [ ] **Above a full-screen video call.** Same check with a Meet/Zoom call: the panel sits over
-      full-screen video, and over the menu bar a full-screen app reveals on hover. It does not
-      appear over the screen saver or the login window — that is intended (ADR-0010).
+      full-screen video. It does not appear over the screen saver or the login window, and it can
+      go _under_ a full-screen app's own menu-bar strip (that strip measures at layer 26, above the
+      panel's 25) — both are intended (ADR-0010).
 - [ ] **Every space.** Switch spaces with ctrl+←/→; the panel follows.
 - [ ] **No Dock icon**, no app switcher entry (`ActivationPolicy::Accessory`).
 

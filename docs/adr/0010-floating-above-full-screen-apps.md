@@ -316,11 +316,17 @@ here; worth an issue.
 
 ### Limitations that stand
 
-Unchanged from the Consequences above, and now confirmed rather than predicted:
+Unchanged from the Consequences above, with one correction from the measured layer numbers:
 
-- Level 25 is the menu bar's level. The panel covers the menu bar region a full-screen app reveals
-  on hover, and it sits over full-screen video. It does **not** appear over screen-saver or
-  secure-input windows (the login window, some recorders' overlays) — nor should it.
+- Level 25 is the menu bar's level, so the panel is drawn over a full-screen app's content and
+  over the ordinary menu bar (the window server's `Menubar` window measures at layer **24**). It is
+  _not_ above everything up there: a full-screen app's own top strip measured at layer **26**, so
+  where a full-screen app draws its own menu-bar-region window the panel goes under it rather than
+  over it. The original prediction that level 25 covers that strip is wrong on this macOS version.
+  Control Centre's items are at 25 too, i.e. peers.
+- It still does **not** appear over screen-saver or secure-input windows (the login window, some
+  recorders' overlays) — nor should it. Full-screen video was not tested separately; it is ordinary
+  full-screen app content and behaves as the first point describes.
 - Anything that rewrites the window level puts the panel back below full-screen apps until the
   next re-assertion. `setAlwaysOnTop` is the only such call in our own code, and both callers
   re-assert immediately after it.
