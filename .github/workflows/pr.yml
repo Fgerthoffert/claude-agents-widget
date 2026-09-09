@@ -1,0 +1,52 @@
+name: PR
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pr-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, typecheck & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run typecheck
+
+      # Coverage thresholds are enforced by vitest.config.ts.
+      - run: npm run test
+
+  build-macos:
+    name: macOS compile check
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      # --no-bundle: compile the app without packaging a .dmg (signing comes in Phase 5).
+      - run: npm run tauri build -- --no-bundle
