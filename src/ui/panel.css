@@ -56,3 +56,32 @@ body {
   font-size: 0.75rem;
   color: var(--panel-muted);
 }
+
+/* Phase 2 placeholder rows; phase 3 owns the real row design. */
+.panel__list {
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.panel__row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0.125rem 0;
+  font-size: 0.75rem;
+}
+
+.panel__row-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel__row-state {
+  flex: none;
+  color: var(--panel-muted);
+  font-variant-numeric: tabular-nums;
+}

@@ -57,6 +57,23 @@ export interface ScannedSession {
   readonly transcriptMtimeMs: number | null;
 }
 
+/** A transcript file found in a `~/.claude/projects/<dir>` directory. */
+export interface TranscriptFile {
+  /** The file's basename without `.jsonl`, which is the session id. */
+  readonly sessionId: string;
+  readonly path: string;
+  readonly mtimeMs: number;
+}
+
+/** What the scanner gathered before the pure matcher turns it into sessions. */
+export interface MatchScannedSessionsInput {
+  readonly processes: readonly ProcessEntry[];
+  /** Process cwds, from `lsof`; a pid may be missing if lsof could not inspect it. */
+  readonly cwdByPid: ReadonlyMap<number, string>;
+  /** Encoded project directory name -> the transcripts it contains. */
+  readonly transcriptsByDir: ReadonlyMap<string, readonly TranscriptFile[]>;
+}
+
 /** Everything the reconciler needs. Pure in, pure out — no clocks, no IO. */
 export interface ReconcileInput {
   readonly hookRecords: readonly SessionRecord[];
