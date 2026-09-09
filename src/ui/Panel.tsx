@@ -19,6 +19,7 @@ import { usePersistedPanelFrame } from './usePersistedPanelFrame';
 import { useSessions } from './useSessions';
 import { useSetupState } from './useSetupState';
 import { useTray } from './useTray';
+import { useWindowDragOnMove } from './useWindowDragOnMove';
 import type { GroupRow } from './SessionGroup';
 import type { LastFocusOutcome } from '../core/evaluateSetupState';
 import type { Session } from '../core/types';
@@ -37,9 +38,10 @@ import './panel.css';
  * not installed, because until they are there is nothing else for it to show; the tray's
  * "Setup / Diagnostics" reopens it at any time (ADR-0009).
  *
- * `data-tauri-drag-region` on this element, the sections and their lists makes the panel's own
- * background draggable while leaving rows clickable: Tauri matches the attribute on the element
- * under the cursor, not on its ancestors (ADR-0008).
+ * It can be dragged from anywhere: `data-tauri-drag-region` handles its own background (Tauri
+ * matches the attribute on the element under the cursor, not on its ancestors), and
+ * `useWindowDragOnMove` covers everything else — a press that moves starts a window drag, a
+ * press that does not stays a click on the row (ADR-0008).
  */
 export const Panel = () => {
   const sessions = useSessions();
@@ -51,6 +53,7 @@ export const Panel = () => {
   const setup = useSetupState(sessions, lastFocus);
 
   usePersistedPanelFrame();
+  const { onMouseDown, consumeDrag } = useWindowDragOnMove();
 
   const openSetup = useCallback(() => {
     setShowSetup(true);
@@ -70,9 +73,15 @@ export const Panel = () => {
     [home, nowMs],
   );
 
-  const handleSelect = useCallback((session: Session) => {
-    void onSessionClick(session).then(setLastFocus);
-  }, []);
+  const handleSelect = useCallback(
+    (session: Session) => {
+      // The click that ends a drag is not a click on the row it happened over.
+      if (consumeDrag()) return;
+
+      void onSessionClick(session).then(setLastFocus);
+    },
+    [consumeDrag],
+  );
 
   const handleHide = useCallback(() => {
     void togglePanelVisibility();
@@ -100,7 +109,7 @@ export const Panel = () => {
   const setupOpen = showSetup || (setup.ready && setup.setup.needsSetup && !setupDismissed);
 
   return (
-    <main className="panel" data-tauri-drag-region>
+    <main className="panel" onMouseDown={onMouseDown} data-tauri-drag-region>
       <PanelHeader onHide={handleHide} />
       {setupOpen ? (
         <SetupView

@@ -11,6 +11,7 @@
     "core:window:allow-set-position",
     "core:window:allow-set-size",
     "core:window:allow-set-always-on-top",
+    "core:window:allow-start-dragging",
     "store:default",
     "autostart:default",
     "process:allow-exit",
@@ -36,16 +37,26 @@
     {
       "identifier": "fs:allow-read-dir",
       "allow": [
-        { "path": "$HOME/.claude-agents-widget/sessions" },
-        { "path": "$HOME/.claude/projects" },
-        { "path": "$HOME/.claude/projects/*" }
+        {
+          "path": "$HOME/.claude-agents-widget/sessions"
+        },
+        {
+          "path": "$HOME/.claude/projects"
+        },
+        {
+          "path": "$HOME/.claude/projects/*"
+        }
       ]
     },
     {
       "identifier": "fs:allow-stat",
       "allow": [
-        { "path": "$HOME/.claude-agents-widget/sessions/*" },
-        { "path": "$HOME/.claude/projects/*/*.jsonl" }
+        {
+          "path": "$HOME/.claude-agents-widget/sessions/*"
+        },
+        {
+          "path": "$HOME/.claude/projects/*/*.jsonl"
+        }
       ]
     },
     {
@@ -69,8 +80,12 @@
     {
       "identifier": "fs:allow-watch",
       "allow": [
-        { "path": "$HOME/.claude-agents-widget/sessions" },
-        { "path": "$HOME/.claude-agents-widget/sessions/*" }
+        {
+          "path": "$HOME/.claude-agents-widget/sessions"
+        },
+        {
+          "path": "$HOME/.claude-agents-widget/sessions/*"
+        }
       ]
     },
     "fs:allow-unwatch",
@@ -85,12 +100,28 @@
         {
           "name": "lsof-cwd",
           "cmd": "/usr/sbin/lsof",
-          "args": ["-a", "-d", "cwd", "-Fn", "-p", { "validator": "^[0-9,]+$" }]
+          "args": [
+            "-a",
+            "-d",
+            "cwd",
+            "-Fn",
+            "-p",
+            {
+              "validator": "^[0-9,]+$"
+            }
+          ]
         },
         {
           "name": "ps-tty",
           "cmd": "/bin/ps",
-          "args": ["-o", "tty=", "-p", { "validator": "^[0-9]+$" }]
+          "args": [
+            "-o",
+            "tty=",
+            "-p",
+            {
+              "validator": "^[0-9]+$"
+            }
+          ]
         },
         {
           "name": "osascript",
@@ -105,7 +136,12 @@
         {
           "name": "open-bundle",
           "cmd": "/usr/bin/open",
-          "args": ["-b", { "validator": "[A-Za-z0-9][A-Za-z0-9._-]*" }]
+          "args": [
+            "-b",
+            {
+              "validator": "[A-Za-z0-9][A-Za-z0-9._-]*"
+            }
+          ]
         },
         {
           "name": "open-bundle-path",

@@ -29,7 +29,10 @@ interface SessionGroupProps {
  */
 export const SessionGroup = ({ label, rows, attention, onSelect }: SessionGroupProps) => (
   <section className="group" aria-label={label} data-tauri-drag-region>
-    <h2 className={`group__heading${attention ? ' group__heading--attention' : ''}`}>
+    <h2
+      className={`group__heading${attention ? ' group__heading--attention' : ''}`}
+      data-tauri-drag-region
+    >
       {label}
       <span className="group__count">{rows.length}</span>
     </h2>

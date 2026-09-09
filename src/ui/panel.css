@@ -1,9 +1,14 @@
 :root {
-  --panel-bg: #f7f7f8;
-  --panel-fg: #1b1b1f;
-  --panel-muted: #6b6b76;
-  --panel-border: #d3d3da;
-  --panel-hover: rgb(0 0 0 / 6%);
+  /* Translucent so the native window material shows through (Liquid Glass, ADR-0008). */
+  --panel-bg: rgb(246 246 248 / 62%);
+  --panel-fg: #16161a;
+  --panel-muted: #5c5c68;
+  --panel-border: rgb(0 0 0 / 8%);
+  --panel-hover: rgb(0 0 0 / 5%);
+  /* The specular edge: a bright hairline on top, fading down the sides. */
+  --panel-sheen: rgb(255 255 255 / 65%);
+  --panel-shadow: 0 12px 34px rgb(0 0 0 / 18%), 0 1px 3px rgb(0 0 0 / 10%);
+  --panel-radius: 18px;
   --state-needs-input: #d97706;
   --state-needs-input-wash: rgb(217 119 6 / 12%);
   --state-working: #0a84ff;
@@ -13,11 +18,13 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --panel-bg: #1c1c20;
-    --panel-fg: #f2f2f4;
-    --panel-muted: #9a9aa6;
-    --panel-border: #35353d;
-    --panel-hover: rgb(255 255 255 / 8%);
+    --panel-bg: rgb(28 28 33 / 58%);
+    --panel-fg: #f4f4f7;
+    --panel-muted: #a6a6b2;
+    --panel-border: rgb(255 255 255 / 10%);
+    --panel-hover: rgb(255 255 255 / 9%);
+    --panel-sheen: rgb(255 255 255 / 22%);
+    --panel-shadow: 0 14px 40px rgb(0 0 0 / 45%), 0 1px 3px rgb(0 0 0 / 30%);
     --state-needs-input: #ff9f0a;
     --state-needs-input-wash: rgb(255 159 10 / 16%);
     --state-working: #409cff;
@@ -45,37 +52,57 @@ body {
 }
 
 .panel {
+  position: relative;
   display: flex;
   overflow: hidden;
   height: 100%;
   flex-direction: column;
-  border: 1px solid var(--panel-border);
-  border-radius: 10px;
+  border-radius: var(--panel-radius);
   background: var(--panel-bg);
+  box-shadow: var(--panel-shadow);
+  /* Blurs whatever is behind the window in the browser preview, and deepens the native
+     material in the app, where macOS is already blurring underneath. */
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
   /* The panel is a widget, not a document: dragging it must never select text. */
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* Glass has an edge: a hairline that catches the light at the top and fades away by the
+   bottom, over a faint inner rim. Non-interactive, and above the content it sits on. */
+.panel::after {
+  position: absolute;
+  z-index: 1;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 0.5px var(--panel-border),
+    inset 0 0.5px 0 var(--panel-sheen);
+  content: '';
+  pointer-events: none;
+  inset: 0;
 }
 
 /* ---- Header: the guaranteed drag handle, and the only chrome on the panel ---------------- */
 
 .panel__header {
   display: flex;
-  height: 24px;
+  height: 26px;
   flex: none;
   align-items: center;
   justify-content: space-between;
-  padding: 0 4px 0 8px;
+  padding: 0 5px 0 9px;
   border-bottom: 1px solid var(--panel-border);
   /* Reads as a handle without spending a row on a title bar. */
   cursor: grab;
 }
 
 .panel__grip {
-  width: 28px;
-  height: 3px;
+  width: 30px;
+  height: 4px;
   border-radius: 2px;
-  background: var(--panel-border);
+  background: currentcolor;
+  opacity: 0.22;
 }
 
 .panel__hide {
@@ -122,6 +149,7 @@ body {
 
 .group + .group {
   border-top: 1px solid var(--panel-border);
+  box-shadow: inset 0 0.5px 0 var(--panel-sheen);
 }
 
 .group__heading {
@@ -130,7 +158,7 @@ body {
   gap: 6px;
   align-items: center;
   margin: 0;
-  padding: 5px 8px 3px;
+  padding: 6px 10px 3px;
   font-size: 9.5px;
   font-weight: 600;
   text-transform: uppercase;
@@ -153,7 +181,7 @@ body {
   overflow-y: auto;
   min-height: 0;
   margin: 0;
-  padding: 0 0 2px;
+  padding: 0 0 3px;
   list-style: none;
 }
 
@@ -215,13 +243,16 @@ body {
 .row {
   display: grid;
   width: 100%;
-  height: 32px;
+  height: 34px;
   align-items: center;
   gap: 8px;
   grid-template-columns: 16px minmax(0, 1fr) auto;
-  padding: 0 8px 0 6px;
+  margin: 0 4px;
+  padding: 0 6px 0 5px;
   border: 0;
   border-left: 2px solid transparent;
+  border-radius: 8px;
+  transition: background-color 120ms ease;
   font: inherit;
   text-align: left;
   color: inherit;
@@ -235,7 +266,7 @@ body {
 
 .row:focus-visible {
   outline: 2px solid var(--state-working);
-  outline-offset: -2px;
+  outline-offset: -1px;
 }
 
 .row__emoji {
@@ -303,6 +334,7 @@ body {
 .row--attention {
   border-left-color: var(--state-needs-input);
   background: var(--state-needs-input-wash);
+  box-shadow: inset 0 0 0 0.5px rgb(255 159 10 / 22%);
 }
 
 .row--attention:hover {
@@ -351,8 +383,9 @@ body {
   flex: none;
   flex-direction: column;
   gap: 1px;
-  padding: 4px 8px 5px;
+  padding: 5px 10px 7px;
   border-top: 1px solid var(--panel-border);
+  box-shadow: inset 0 0.5px 0 var(--panel-sheen);
   font-size: 9.5px;
   line-height: 12px;
   color: var(--panel-muted);
