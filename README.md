@@ -7,9 +7,10 @@ screen. Clicking a session focuses the exact terminal window it runs in.
 Built for the case where you have 5–10+ agents running in parallel and can no longer tell which one
 is working, which is done, and which has been silently waiting for input.
 
-> **Status: Phase 2 — detection core.** Sessions are now detected live (hooks + process
-> scanning) and the panel shows them; the real panel/tray UI and click-to-focus land in
-> Phases 3–4. See the [PRD](.claude/PRPs/prds/claude-agents-widget.prd.md) for the roadmap.
+> **Status: Phase 3 — UI surfaces.** Sessions are detected live (hooks + process scanning), the
+> floating panel and the menu bar dropdown are real, and the panel remembers where you parked it.
+> Click-to-focus lands in Phase 4 — until then a click on a row is a no-op.
+> See the [PRD](.claude/PRPs/prds/claude-agents-widget.prd.md) for the roadmap.
 
 ## Requirements
 
@@ -25,6 +26,21 @@ npm install
 npm run install-hooks             # register the session hooks (see below)
 npm run tauri dev                 # launches the app (menu bar icon, no Dock icon)
 ```
+
+### The panel
+
+One 32px row per session: a state dot, the **session name** (falling back to the project
+directory), the shortened path, and how long it has been in its current state. `needs input` is the
+only row that raises its voice — amber accent, tint and a slow pulse — so it is the one thing you
+notice from across a desk.
+
+The panel sits above all windows on every space and is dragged by its header or any of its
+background; rows stay clickable. Its position and size are remembered across restarts, and clamped
+back onto an attached display if the monitor you left it on is gone. The `✕` and the tray's
+`Show/Hide Panel` both hide it. `Launch at Login` lives in the tray menu and starts off.
+
+Design rationale is in [ADR-0008](docs/adr/0008-panel-and-tray-design.md); what to check by hand
+after a change is in [docs/ui-smoke-checklist.md](docs/ui-smoke-checklist.md).
 
 ### Session detection
 

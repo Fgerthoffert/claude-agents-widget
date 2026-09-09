@@ -1,34 +1,76 @@
+import { useCallback, useMemo } from 'react';
+
 import { countSessionStates } from '../core/countSessionStates';
+import { describeSession } from '../core/describeSession';
 import { formatAggregate } from '../core/formatAggregate';
+import { formatTimeInState } from '../core/formatTimeInState';
+import { EmptyState } from './EmptyState';
+import { PanelHeader } from './PanelHeader';
+import { SessionRow } from './SessionRow';
+import { onSessionClick } from './onSessionClick';
+import { togglePanelVisibility } from './togglePanelVisibility';
+import { useHomeDir } from './useHomeDir';
+import { useNowMs } from './useNowMs';
+import { usePersistedPanelFrame } from './usePersistedPanelFrame';
 import { useSessions } from './useSessions';
+import { useTray } from './useTray';
+import type { Session } from '../core/types';
 import './panel.css';
 
-// Phase 2 placeholder: proves the detection pipeline reaches the UI. Phase 3 replaces the
-// body with the real session list. `data-tauri-drag-region` makes the whole surface draggable.
+/**
+ * The always-on-top floating panel: one row per session, ordered by what needs attention.
+ *
+ * The order comes from the store already (`needs_input` → `working` → `done_idle` → `ended`,
+ * then most recent first) and is deliberately not touched here — emphasis is styling only, so
+ * a row never moves under the user's cursor.
+ *
+ * `data-tauri-drag-region` on this element and on the list makes the panel's own background
+ * draggable while leaving rows clickable: Tauri matches the attribute on the element under the
+ * cursor, not on its ancestors (ADR-0008).
+ */
 export const Panel = () => {
   const sessions = useSessions();
+  const nowMs = useNowMs();
+  const home = useHomeDir();
+
+  usePersistedPanelFrame();
+  useTray(sessions);
+
   const counts = countSessionStates(sessions);
+  const rows = useMemo(
+    () => sessions.map((session) => ({ session, description: describeSession(session, home) })),
+    [sessions, home],
+  );
+
+  const handleSelect = useCallback((session: Session) => {
+    void onSessionClick(session);
+  }, []);
+
+  const handleHide = useCallback(() => {
+    void togglePanelVisibility();
+  }, []);
 
   return (
     <main className="panel" data-tauri-drag-region>
-      <h1 className="panel__title">Claude Agents Widget</h1>
-      {sessions.length === 0 ? (
-        <p className="panel__empty">no sessions yet</p>
+      <PanelHeader
+        aggregate={formatAggregate(counts)}
+        attention={counts.needsInput > 0}
+        onHide={handleHide}
+      />
+      {rows.length === 0 ? (
+        <EmptyState />
       ) : (
-        <>
-          <p className="panel__empty">
-            {sessions.length} session{sessions.length === 1 ? '' : 's'} detected ·{' '}
-            {formatAggregate(counts)}
-          </p>
-          <ul className="panel__list">
-            {sessions.map((session) => (
-              <li key={session.sessionId} className="panel__row">
-                <span className="panel__row-title">{session.title ?? session.sessionId}</span>
-                <span className="panel__row-state">{session.state}</span>
-              </li>
-            ))}
-          </ul>
-        </>
+        <ul className="panel__list" data-tauri-drag-region>
+          {rows.map(({ session, description }) => (
+            <SessionRow
+              key={session.sessionId}
+              session={session}
+              description={description}
+              age={formatTimeInState(session, nowMs)}
+              onSelect={handleSelect}
+            />
+          ))}
+        </ul>
       )}
     </main>
   );
