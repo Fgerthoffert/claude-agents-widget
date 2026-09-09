@@ -4,6 +4,7 @@ import { buildTrayModel } from '../core/buildTrayModel';
 import { isTauri } from './isTauri';
 import { onSessionClick } from './onSessionClick';
 import { togglePanelVisibility } from './togglePanelVisibility';
+import type { LastFocusOutcome } from '../core/evaluateSetupState';
 import type { Session } from '../core/types';
 import type { TrayModel } from '../core/buildTrayModel';
 import type { Menu, MenuOptions } from '@tauri-apps/api/menu';
@@ -11,18 +12,26 @@ import type { Menu, MenuOptions } from '@tauri-apps/api/menu';
 /** Must match `TrayIconBuilder::with_id` in src-tauri/src/lib.rs. */
 const TRAY_ID = 'main';
 
+/** What the dropdown can do beyond focusing a session. */
+export interface TrayActions {
+  readonly onOpenSetup: () => void;
+  readonly onFocusResult: (outcome: LastFocusOutcome) => void;
+}
+
 /**
- * Builds the dropdown from the model plus the two app-level toggles.
+ * Builds the dropdown from the model plus the app-level items.
  *
  * Items are passed as plain option objects rather than constructed one by one: the native menu
  * is rebuilt whenever the session list changes, so the fewer resources created per rebuild the
  * better. Session actions read `sessionsRef` at click time, never a captured snapshot — the
- * list may have moved on between the menu opening and the user picking a line.
+ * list may have moved on between the menu opening and the user picking a line, and `actionsRef`
+ * is read the same way so a new render's callbacks do not force a menu rebuild.
  */
 const menuOptions = (
   model: TrayModel,
   autostart: boolean,
   sessionsRef: { current: readonly Session[] },
+  actionsRef: { current: TrayActions },
   onAutostartToggle: () => void,
 ): MenuOptions => ({
   items: [
@@ -35,7 +44,11 @@ const menuOptions = (
         const session = sessionsRef.current.find(
           (candidate) => candidate.sessionId === item.sessionId,
         );
-        if (session !== undefined) void onSessionClick(session);
+        if (session !== undefined) {
+          void onSessionClick(session).then((outcome) => {
+            actionsRef.current.onFocusResult(outcome);
+          });
+        }
       },
     })),
     ...(model.overflow > 0
@@ -46,6 +59,13 @@ const menuOptions = (
       text: 'Show/Hide Panel',
       action: () => {
         void togglePanelVisibility();
+      },
+    },
+    // Permanently reachable, not only on first run: it is also the diagnostics dump.
+    {
+      text: 'Setup / Diagnostics',
+      action: () => {
+        actionsRef.current.onOpenSetup();
       },
     },
     { text: 'Launch at Login', checked: autostart, action: onAutostartToggle },
@@ -68,12 +88,14 @@ const menuOptions = (
  * the same store the panel renders, and building it in TypeScript means one model, one code
  * path and no second polling loop.
  */
-export const useTray = (sessions: readonly Session[]): void => {
+export const useTray = (sessions: readonly Session[], actions: TrayActions): void => {
   const model = useMemo(() => buildTrayModel(sessions), [sessions]);
   const [autostart, setAutostart] = useState(false);
   const sessionsRef = useRef(sessions);
+  const actionsRef = useRef(actions);
   const menuRef = useRef<Menu | null>(null);
   sessionsRef.current = sessions;
+  actionsRef.current = actions;
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -114,7 +136,9 @@ export const useTray = (sessions: readonly Session[]): void => {
       const tray = await TrayIcon.getById(TRAY_ID);
       if (tray === null) return;
 
-      const menu = await MenuApi.new(menuOptions(model, autostart, sessionsRef, toggleAutostart));
+      const menu = await MenuApi.new(
+        menuOptions(model, autostart, sessionsRef, actionsRef, toggleAutostart),
+      );
       // A newer session list arrived while we were building: that run owns the tray now.
       if (state.cancelled) {
         await menu.close();

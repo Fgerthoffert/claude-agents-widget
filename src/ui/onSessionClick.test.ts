@@ -35,11 +35,16 @@ describe('onSessionClick', () => {
   it('reports the precision the focus engine achieved', async () => {
     resolves({ ok: true, host: 'vscode', method: 'window', degradedFrom: null, detail: null });
 
-    await expect(onSessionClick(session)).resolves.toEqual({ ok: true, detail: 'window' });
+    await expect(onSessionClick(session)).resolves.toEqual({
+      ok: true,
+      method: 'window',
+      permissionDenied: false,
+      detail: 'window',
+    });
     expect(mocks.focusSession).toHaveBeenCalledWith(session);
   });
 
-  it('reports an app-level landing as such, rather than as a plain success', async () => {
+  it('keeps a refused precise attempt visible even when the fallback worked', async () => {
     resolves({
       ok: true,
       host: 'warp',
@@ -48,13 +53,33 @@ describe('onSessionClick', () => {
       detail: null,
     });
 
-    await expect(onSessionClick(session)).resolves.toEqual({ ok: true, detail: 'app' });
+    await expect(onSessionClick(session)).resolves.toEqual({
+      ok: true,
+      method: 'app',
+      permissionDenied: true,
+      detail: 'app',
+    });
   });
 
   it('surfaces the typed failure reason so a click is never silent', async () => {
     resolves({ ok: false, host: 'unknown', reason: 'no-host', detail: null });
 
-    await expect(onSessionClick(session)).resolves.toEqual({ ok: false, detail: 'no-host' });
+    await expect(onSessionClick(session)).resolves.toEqual({
+      ok: false,
+      method: null,
+      permissionDenied: false,
+      detail: 'no-host',
+    });
+  });
+
+  it('flags a refused click as a permission problem', async () => {
+    resolves({ ok: false, host: 'vscode', reason: 'permission-denied', detail: null });
+
+    await expect(onSessionClick(session)).resolves.toMatchObject({
+      ok: false,
+      permissionDenied: true,
+      detail: 'permission-denied',
+    });
   });
 
   it('does not let an unexpected rejection escape into the click handler', async () => {
@@ -63,6 +88,8 @@ describe('onSessionClick', () => {
 
     await expect(onSessionClick(session)).resolves.toEqual({
       ok: false,
+      method: null,
+      permissionDenied: false,
       detail: 'focus_engine_error',
     });
     expect(error).toHaveBeenCalledOnce();

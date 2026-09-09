@@ -90,10 +90,10 @@ Keep it inside the existing 320px panel; no second window unless it's genuinely 
 
 ## Risks
 
-| Risk | Mitigation |
-|---|---|
-| Unsigned build blocked by Gatekeeper, user thinks it's broken | Prominent, exact workaround in README + release notes; ADR-0009 records the trade-off |
-| `tauri-action` version drift breaks releases | Pin by SHA/major tag; verify with a real run before tagging |
-| Consent-gated installer damages the user's real hooks | Reuse the tested `mergeHookSettings`; backup first; dry-run view; never write on a malformed file |
-| Universal vs arm64 build confusion | Pick one, state it in README and release notes |
-| Tag/version mismatch produces a mislabeled release | Automated check that fails the workflow |
+| Risk                                                          | Mitigation                                                                                        |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Unsigned build blocked by Gatekeeper, user thinks it's broken | Prominent, exact workaround in README + release notes; ADR-0009 records the trade-off             |
+| `tauri-action` version drift breaks releases                  | Pin by SHA/major tag; verify with a real run before tagging                                       |
+| Consent-gated installer damages the user's real hooks         | Reuse the tested `mergeHookSettings`; backup first; dry-run view; never write on a malformed file |
+| Universal vs arm64 build confusion                            | Pick one, state it in README and release notes                                                    |
+| Tag/version mismatch produces a mislabeled release            | Automated check that fails the workflow                                                           |
