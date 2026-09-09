@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Panel } from './Panel';
+import { startWindowDrag } from './startWindowDrag';
 import type { Session } from '../core/types';
 
 const mocks = vi.hoisted(() => ({
@@ -15,6 +16,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('./useSessions', () => ({ useSessions: () => mocks.sessions.current }));
 vi.mock('./onSessionClick', () => ({ onSessionClick: mocks.onSessionClick }));
 vi.mock('./togglePanelVisibility', () => ({ togglePanelVisibility: mocks.togglePanelVisibility }));
+vi.mock('./startWindowDrag', () => ({ startWindowDrag: vi.fn(() => Promise.resolve()) }));
 
 const NOW = Date.parse('2026-09-09T12:00:00.000Z');
 
@@ -201,6 +203,32 @@ describe('Panel', () => {
     // A packaged app has no repository and no npm, so the fix has to be a button.
     expect(screen.getByRole('button', { name: 'Install hook' })).toBeInTheDocument();
     expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+  });
+
+  it('drags the window when a press moves, from anywhere including over a row', async () => {
+    const user = userEvent.setup();
+    renderPanel([session({ sessionId: 'a', title: 'Busy' })]);
+
+    const row = rowByName(/Busy/);
+    await user.pointer([
+      { keys: '[MouseLeft>]', target: row },
+      { coords: { clientX: 40, clientY: 40 } },
+      { keys: '[/MouseLeft]' },
+    ]);
+
+    expect(startWindowDrag).toHaveBeenCalledTimes(1);
+    // The click that ended the drag is not a click on the row it happened over.
+    expect(mocks.onSessionClick).not.toHaveBeenCalled();
+  });
+
+  it('does not drag when a press does not move, so rows stay clickable', async () => {
+    const user = userEvent.setup();
+    renderPanel([session({ sessionId: 'a', title: 'Busy' })]);
+
+    await user.click(rowByName(/Busy/));
+
+    expect(startWindowDrag).not.toHaveBeenCalled();
+    expect(mocks.onSessionClick).toHaveBeenCalledTimes(1);
   });
 
   it('hides the panel on request', async () => {

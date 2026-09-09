@@ -87,7 +87,13 @@ body {
 .preview__frame {
   width: 320px;
   height: 400px;
-  box-shadow: 0 10px 30px rgb(0 0 0 / 25%);
+  border-radius: 18px;
+  /* Stand-in for a busy desktop, so the translucency is visible at all. */
+  background-image:
+    radial-gradient(circle at 20% 25%, #4f8cff 0%, transparent 45%),
+    radial-gradient(circle at 78% 18%, #ff6f91 0%, transparent 40%),
+    radial-gradient(circle at 62% 82%, #34c759 0%, transparent 42%),
+    linear-gradient(135deg, #2b2b33, #6c6c7a);
 }
 
 .preview__frame--tall {

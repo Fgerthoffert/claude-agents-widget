@@ -26,12 +26,21 @@
         "maximizable": false,
         "minimizable": false,
         "shadow": true,
-        "acceptFirstMouse": true
+        "acceptFirstMouse": true,
+        "transparent": true,
+        "windowEffects": {
+          "effects": [
+            "popover"
+          ],
+          "state": "active",
+          "radius": 18
+        }
       }
     ],
     "security": {
       "csp": null
-    }
+    },
+    "macOSPrivateApi": true
   },
   "bundle": {
     "active": true,

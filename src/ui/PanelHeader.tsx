@@ -14,7 +14,13 @@ interface PanelHeaderProps {
 export const PanelHeader = ({ onHide }: PanelHeaderProps) => (
   <header className="panel__header" data-tauri-drag-region>
     <span className="panel__grip" aria-hidden="true" data-tauri-drag-region />
-    <button type="button" className="panel__hide" aria-label="Hide panel" onClick={onHide}>
+    <button
+      type="button"
+      className="panel__hide"
+      aria-label="Hide panel"
+      data-no-drag
+      onClick={onHide}
+    >
       ✕
     </button>
   </header>
