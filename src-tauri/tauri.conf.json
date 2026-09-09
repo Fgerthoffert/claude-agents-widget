@@ -29,9 +29,7 @@
         "acceptFirstMouse": true,
         "transparent": true,
         "windowEffects": {
-          "effects": [
-            "popover"
-          ],
+          "effects": ["popover"],
           "state": "active",
           "radius": 18
         }
