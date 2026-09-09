@@ -1,11 +1,10 @@
 import { useCallback, useMemo } from 'react';
 
-import { countSessionStates } from '../core/countSessionStates';
+import { describeAge } from '../core/describeAge';
 import { describeSession } from '../core/describeSession';
-import { formatAggregate } from '../core/formatAggregate';
-import { formatTimeInState } from '../core/formatTimeInState';
 import { EmptyState } from './EmptyState';
 import { PanelHeader } from './PanelHeader';
+import { PanelLegend } from './PanelLegend';
 import { SessionRow } from './SessionRow';
 import { onSessionClick } from './onSessionClick';
 import { togglePanelVisibility } from './togglePanelVisibility';
@@ -36,7 +35,6 @@ export const Panel = () => {
   usePersistedPanelFrame();
   useTray(sessions);
 
-  const counts = countSessionStates(sessions);
   const rows = useMemo(
     () => sessions.map((session) => ({ session, description: describeSession(session, home) })),
     [sessions, home],
@@ -52,11 +50,7 @@ export const Panel = () => {
 
   return (
     <main className="panel" data-tauri-drag-region>
-      <PanelHeader
-        aggregate={formatAggregate(counts)}
-        attention={counts.needsInput > 0}
-        onHide={handleHide}
-      />
+      <PanelHeader onHide={handleHide} />
       {rows.length === 0 ? (
         <EmptyState />
       ) : (
@@ -66,12 +60,13 @@ export const Panel = () => {
               key={session.sessionId}
               session={session}
               description={description}
-              age={formatTimeInState(session, nowMs)}
+              age={describeAge(session, nowMs)}
               onSelect={handleSelect}
             />
           ))}
         </ul>
       )}
+      <PanelLegend />
     </main>
   );
 };

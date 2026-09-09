@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react';
 
-import { countSessionStates } from '../core/countSessionStates';
+import { describeAge } from '../core/describeAge';
 import { describeSession } from '../core/describeSession';
-import { formatAggregate } from '../core/formatAggregate';
-import { formatTimeInState } from '../core/formatTimeInState';
 import { EmptyState } from '../ui/EmptyState';
 import { PanelHeader } from '../ui/PanelHeader';
+import { PanelLegend } from '../ui/PanelLegend';
 import { SessionRow } from '../ui/SessionRow';
 import { useNowMs } from '../ui/useNowMs';
 import { buildMockSessions } from './buildMockSessions';
@@ -53,7 +52,6 @@ export const PanelPreview = () => {
   // Ages are anchored to mount, not to every tick, so rows visibly age as you watch them.
   const [mountedMs] = useState(nowMs);
   const sessions = useMemo(() => buildMockSessions(scenario, mountedMs), [scenario, mountedMs]);
-  const counts = countSessionStates(sessions);
 
   const onSelect = (session: Session) => {
     setLastAction(
@@ -67,8 +65,6 @@ export const PanelPreview = () => {
     >
       <main className="panel">
         <PanelHeader
-          aggregate={formatAggregate(counts)}
-          attention={counts.needsInput > 0}
           onHide={() => {
             setLastAction(
               'Hide clicked: the real panel would hide until you reopen it from the menu bar.',
@@ -84,12 +80,13 @@ export const PanelPreview = () => {
                 key={session.sessionId}
                 session={session}
                 description={describeSession(session, home)}
-                age={formatTimeInState(session, nowMs)}
+                age={describeAge(session, nowMs)}
                 onSelect={onSelect}
               />
             ))}
           </ul>
         )}
+        <PanelLegend />
       </main>
     </div>
   );

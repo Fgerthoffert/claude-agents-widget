@@ -60,7 +60,12 @@ describe('Panel', () => {
 
     const rows = screen.getAllByRole('listitem');
     expect(rows).toHaveLength(3);
-    expect(rows.map((row) => row.textContent.startsWith('Blocked'))).toEqual([true, false, false]);
+    // Titles rather than whole rows: every row now opens with a state emoji.
+    expect(rows.map((row) => row.querySelector('.row__title')?.textContent)).toEqual([
+      'Blocked on permission',
+      'Refactoring the scanner',
+      'Docs pass',
+    ]);
     expect(screen.getByText('Refactoring the scanner')).toBeInTheDocument();
   });
 
@@ -144,23 +149,54 @@ describe('Panel', () => {
     expect(screen.queryAllByRole('listitem')).toHaveLength(0);
   });
 
-  it('shows the aggregate in the header and hides the panel on request', async () => {
+  it('hides the panel on request', async () => {
     const user = userEvent.setup();
-    renderPanel([
-      session({ sessionId: 'a', state: 'needs_input', title: 'Blocked' }),
-      session({ sessionId: 'b', title: 'Busy' }),
-    ]);
-
-    expect(screen.getByText('1▶ 1⏸')).toHaveClass('panel__aggregate--attention');
+    renderPanel([session({ sessionId: 'a', title: 'Busy' })]);
 
     await user.click(screen.getByRole('button', { name: 'Hide panel' }));
     expect(mocks.togglePanelVisibility).toHaveBeenCalledTimes(1);
   });
 
-  it('reads idle in the header with no sessions', () => {
-    renderPanel([]);
+  it('keeps counts out of the header, where the rows already are the count', () => {
+    renderPanel([
+      session({ sessionId: 'a', state: 'needs_input', title: 'Blocked' }),
+      session({ sessionId: 'b', title: 'Busy' }),
+    ]);
 
-    expect(screen.getByText('idle')).not.toHaveClass('panel__aggregate--attention');
+    expect(screen.getByRole('banner').textContent).not.toMatch(/\d/);
+  });
+
+  it('explains every glyph it uses in the legend', () => {
+    renderPanel([session({ sessionId: 'a', title: 'Busy' })]);
+
+    const legend = screen.getByRole('contentinfo');
+    for (const label of ['needs you', 'working', 'done', 'ended', 'working for', 'inactive for']) {
+      expect(legend.textContent).toContain(label);
+    }
+    for (const glyph of ['✋', '🔄', '✅', '💤', '⏱', '⏳']) {
+      expect(legend.textContent).toContain(glyph);
+    }
+  });
+
+  it('distinguishes time spent working from time spent idle', () => {
+    renderPanel([
+      session({ sessionId: 'a', title: 'Busy', state: 'working' }),
+      session({ sessionId: 'b', title: 'Waiting', state: 'needs_input' }),
+      session({ sessionId: 'c', title: 'Finished', state: 'done_idle' }),
+    ]);
+
+    const age = (name: RegExp) => rowByName(name).querySelector('.row__age');
+    expect(age(/Busy/)?.textContent).toContain('⏱');
+    expect(age(/Busy/)).toHaveClass('row__age--active');
+    expect(age(/Waiting/)?.textContent).toContain('⏳');
+    expect(age(/Waiting/)).not.toHaveClass('row__age--active');
+    expect(age(/Finished/)?.textContent).toContain('⏳');
+  });
+
+  it('labels the state and what the duration measures for screen readers', () => {
+    renderPanel([session({ sessionId: 'a', title: 'Busy', state: 'working' })]);
+
+    expect(rowByName(/Busy/).getAttribute('aria-label')).toContain('working for');
   });
 
   it('ages a row on its own, without new store data', () => {
