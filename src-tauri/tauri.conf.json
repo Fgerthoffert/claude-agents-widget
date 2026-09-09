@@ -25,7 +25,8 @@
         "resizable": true,
         "maximizable": false,
         "minimizable": false,
-        "shadow": true
+        "shadow": true,
+        "acceptFirstMouse": true
       }
     ],
     "security": {

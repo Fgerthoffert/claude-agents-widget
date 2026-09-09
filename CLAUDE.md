@@ -12,7 +12,7 @@ one-click focusing of the terminal window that owns it. Tauri 2, TypeScript-firs
 | `src/ui/`        | React components (one per file), presentation only.                             |
 | `hooks/`         | The Claude Code hook script, copied verbatim to `~/.claude-agents-widget/`.     |
 | `scripts/`       | Developer/user CLIs (the hook installer).                                       |
-| `src-tauri/`     | Thin Rust plumbing: tray, window, FS watch, shell exec via plugins.             |
+| `src-tauri/`     | Thin Rust plumbing: tray, window, plugins — plus the NSPanel conversion (0010). |
 | `src/dev/`       | Browser preview harness for the panel. Never shipped.                           |
 | `docs/adr/`      | One Architecture Decision Record per significant decision.                      |
 | `.claude/PRPs/`  | PRDs (`prds/`) and implementation plans (`plans/`).                             |

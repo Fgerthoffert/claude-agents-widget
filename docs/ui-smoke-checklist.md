@@ -15,10 +15,18 @@ npm run tauri dev
 
 - [ ] **Above all windows.** Bring Chrome, Slack and a terminal to the front in turn. The panel
       stays visible over each.
-- [ ] **Above a full-screen video call.** Start a Meet/Zoom call, make it full screen, then check
-      the panel. macOS treats full-screen apps as their own space — record what actually happens
-      (visible / hidden / visible only on the desktop space), because ADR-0008 promises the
-      observed behaviour, not the hoped-for one.
+- [ ] **Above a full-screen app.** Put a throwaway app (a new TextEdit document) into native full
+      screen on the _same_ display the panel is on. The panel stays drawn over it (ADR-0010).
+      Confirm it with `CGWindowListCopyWindowInfo(.optionOnScreenOnly)` — the panel must be in that
+      list, at layer 25 — and with a screenshot. Not with `isVisible()` or `isOnActiveSpace()`:
+      both return `true` for a window the window server is not compositing.
+- [ ] **Clicking it over a full-screen app costs nothing.** Click the panel's legend strip while it
+      floats over that full-screen Space: the Space must not change and the frontmost app must stay
+      the full-screen one. One click, not two, must reach the panel (`acceptFirstMouse`).
+- [ ] **Above a full-screen video call.** Same check with a Meet/Zoom call: the panel sits over
+      full-screen video. It does not appear over the screen saver or the login window, and it can
+      go _under_ a full-screen app's own menu-bar strip (that strip measures at layer 26, above the
+      panel's 25) — both are intended (ADR-0010).
 - [ ] **Every space.** Switch spaces with ctrl+←/→; the panel follows.
 - [ ] **No Dock icon**, no app switcher entry (`ActivationPolicy::Accessory`).
 

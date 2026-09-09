@@ -1,3 +1,4 @@
+import { floatPanelAboveFullScreen } from './floatPanelAboveFullScreen';
 import { isTauri } from './isTauri';
 
 /**
@@ -16,6 +17,8 @@ export const showPanel = async (): Promise<void> => {
     const panel = getCurrentWindow();
     await panel.show();
     await panel.setAlwaysOnTop(true);
+    // Strictly after `setAlwaysOnTop`, which rewrites the level back below full screen (0010).
+    await floatPanelAboveFullScreen();
     await panel.setFocus();
   } catch (error) {
     console.error('could not show the panel', error);

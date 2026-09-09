@@ -1,6 +1,6 @@
 # ADR-0010: Floating the panel above other apps' full-screen Spaces
 
-- **Status**: Proposed — investigation complete, implementation deferred
+- **Status**: Accepted — route 2 implemented and measured (see the addendum at the end)
 - **Date**: 2026-09-09
 
 ## Context
@@ -201,3 +201,136 @@ reachable, in the spirit of the permission assertions the repo already keeps for
 assert the command is registered in `generate_handler!`, not just that the TypeScript compiles.
 App-local commands are not in `gen/schemas/acl-manifests.json`, so unlike a plugin command a
 missing one produces no ACL error to notice.
+
+## Addendum — 2026-09-09: route 2, implemented and measured
+
+Route 2 shipped. What follows is what was built and what was measured on the real binary; the
+investigation above is left untouched, because it is the record of why route 1 was rejected.
+
+### What was built
+
+- **`tauri-nspanel`, the `v2.1` line**, pinned by revision
+  (`c9ec213`, version 2.1.0) rather than by branch — it is not published to crates.io.
+  `v2.1` is a rewrite of the `v2` branch the investigation looked at: `objc2` instead of the
+  deprecated `cocoa`/`objc` crates, a `tauri_panel!` macro that declares the `NSPanel` subclass
+  and its selector overrides, and — decisively — an `examples/fullscreen` that is this exact use
+  case. It is macOS-only, so it sits under `[target.'cfg(target_os = "macos")'.dependencies]`.
+- **`src-tauri/src/floating_panel.rs`**, one `#[cfg(target_os = "macos")] mod`, ~95 lines. It
+  declares the panel class with `can_become_key_window: true` (the override whose loss made a
+  bare `object_setClass` render nothing) and `is_floating_panel: true`, converts the window once
+  in `setup`, and exposes `float_panel_above_full_screen` as the only new `invoke` command.
+- **Style mask and collection behaviour are read-modify-write**, via `StyleMask::from_raw` /
+  `CollectionBehavior::from_raw`. The crate's own example overwrites both; that would have
+  dropped `Resizable` (the panel is user-resizable, and the window is undecorated so the mask is
+  the only thing keeping edge-resize alive) and `tao`'s `CanJoinAllSpaces`.
+- **`src/ui/floatPanelAboveFullScreen.ts`** decides _when_, as ADR-0002 requires: called by
+  `showPanel` and `togglePanelVisibility` **after** their `setAlwaysOnTop(true)`. Startup is
+  covered by the Rust `setup` conversion, and a move needs nothing — the investigation already
+  measured level and mask surviving `setSize`/`setPosition` untouched.
+- **`src/ui/floatPanelAboveFullScreen.test.ts`** is the wiring test the notes above asked for: it
+  extracts the command name from the `invoke(...)` call and asserts Rust registers that exact
+  name in `generate_handler!`. Renaming either side fails the suite (checked by mutating
+  `lib.rs`), which is the only place a silently unreachable app-local command is visible.
+
+### What was measured
+
+On the built `.app` (`npm run tauri build`, launched directly — never `tauri dev`), macOS
+Darwin 25.3, three displays, with an isolated `HOME` so the persisted frame and `~/.claude` could
+not interfere. Space membership came from `CGWindowListCopyWindowInfo(.optionOnScreenOnly)` and
+the current Space's _type_ from `CGSCopyManagedDisplaySpaces` (`type=4` is full screen), because
+`isVisible()`/`isOnActiveSpace()` cannot be trusted here. Note the Dock's `Fullscreen Backdrop`
+window the investigation used as its tell **does not exist on this macOS version**; the Space type,
+and the Dock's own window going `onscreen=false`, replace it.
+
+**1. It works, and the window class really is the discriminator.** A/B on the same machine
+minutes apart, same display, with another app full-screen on it:
+
+```
+control   (conversion skipped) layer=5  onscreen=0   ← reproduces finding 3 above
+treatment (NSPanel)            layer=25 onscreen=1
+```
+
+Screenshots confirm it twice with the window server, not by inference: the panel drawn over a
+full-screen TextEdit document (light popover material over white), and over a full-screen dark
+editor (the same material picking up the dark backdrop). The tint changing with what is behind it
+is also the proof that `transparent` + `windowEffects` survived the class change — an opaque
+window cannot do that — as are the 18px rounded corners and the drop shadow.
+
+**2. The webview paints.** This was route 1's blocker and it does not happen: every capture shows
+fully rendered content — setup view, empty state, legend, emoji.
+
+**3. Clicking costs nothing — but only after two more changes.** As first built, a click on the
+panel over a full-screen Space did not switch Spaces (all three displays kept their Space uuid
+and type) but _did_ make the widget the frontmost app, and needed **two** clicks to reach the
+webview at all. Both come from the same place: `can_become_key_window: true` means a click takes
+key, taking key activates an accessory app, and until the panel is key every click is an
+"first mouse" click that AppKit swallows. The fix is the pair:
+
+- `panel.set_becomes_key_only_if_needed(true)` — a click no longer takes key, so the app is not
+  activated;
+- `"acceptFirstMouse": true` in `tauri.conf.json` — the click still reaches the webview.
+
+Measured after that, over a full-screen Space:
+
+```
+BEFORE: frontmost=Slack   spaces: [FULLSCREEN a, FULLSCREEN b, USER c]
+click inside the panel
+AFTER : frontmost=Slack   spaces: [FULLSCREEN a, FULLSCREEN b, USER c]
+```
+
+and a _single_ click on the panel's dismiss button hid it, with the frontmost app unchanged. This
+is strictly better than the pre-conversion window, which took two clicks and stole focus on the
+first.
+
+**4. Everything the conversion could plausibly break was re-checked on the final binary.**
+
+| Behaviour                                                       | Result                                                                                 |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `data-tauri-drag-region` drag (header grip)                     | moves the window by the exact delta, first press, no focus change                      |
+| press-and-move drag (`useWindowDragOnMove` → `startWindowDrag`) | moves it too, short by the 4px `THRESHOLD`, from an element with no drag region        |
+| drag across displays                                            | works; lands where the delta says                                                      |
+| hide from the panel header                                      | `onscreen=0`; `isVisible()` correctly reports false afterwards                         |
+| reveal from the tray's "Show/Hide Panel"                        | back `onscreen=1` at **layer 25** — which is also the proof the `invoke` executed      |
+| tray icon, title and the TypeScript dropdown                    | unchanged: `idle` label, "No active sessions", Show/Hide, Setup, Launch at Login, Quit |
+| position/size persistence                                       | restored the pinned frame on launch; wrote the dragged frame back to `panel.json`      |
+| off-screen clamp                                                | a saved frame outside every monitor was moved onto one instead of vanishing            |
+| setup view / first-run                                          | opened from "Setup & diagnostics", buttons live, hooks installed into the temp HOME    |
+
+**5. The `invoke` path is proven, not assumed.** `setAlwaysOnTop(true)` cannot produce level 25 —
+on the unconverted control it produced 5. Every TypeScript reveal path ends with the window at 25,
+so `float_panel_above_full_screen` demonstrably ran. This is the failure the notes above warned
+about, closed by measurement as well as by the wiring test.
+
+### Not verified, and why
+
+The **Rust fallback tray menu** could not be exercised: `useTray` replaces it within ~0.4s of
+launch and the launch race could not be won reliably. Its `toggle_panel` calls the same
+`is_visible()` / `hide()` / `show()` / `set_focus()` Tauri APIs that the TypeScript toggle drove
+successfully on the converted panel, and it is unchanged by this work — but the fallback _menu_
+itself was not seen on screen.
+
+Separately, and pre-existing: a frame saved in physical pixels cannot address a display whose
+scale factor differs from the window's current one, because `setPosition` converts with the
+window's scale. On a 2× + 1× mix the panel cannot be restored onto the 1× display. Out of scope
+here; worth an issue.
+
+### Limitations that stand
+
+Unchanged from the Consequences above, with one correction from the measured layer numbers:
+
+- Level 25 is the menu bar's level, so the panel is drawn over a full-screen app's content and
+  over the ordinary menu bar (the window server's `Menubar` window measures at layer **24**). It is
+  _not_ above everything up there: a full-screen app's own top strip measured at layer **26**, so
+  where a full-screen app draws its own menu-bar-region window the panel goes under it rather than
+  over it. The original prediction that level 25 covers that strip is wrong on this macOS version.
+  Control Centre's items are at 25 too, i.e. peers.
+- It still does **not** appear over screen-saver or secure-input windows (the login window, some
+  recorders' overlays) — nor should it. Full-screen video was not tested separately; it is ordinary
+  full-screen app content and behaves as the first point describes.
+- Anything that rewrites the window level puts the panel back below full-screen apps until the
+  next re-assertion. `setAlwaysOnTop` is the only such call in our own code, and both callers
+  re-assert immediately after it.
+- The panel is now an `NSPanel`, so `NSPanel` semantics apply: Escape can close it (hence
+  `set_released_when_closed(false)`, so a stray close is survivable), and a floating panel would
+  hide on app deactivation (hence `set_hides_on_deactivate(false)`, since this app is never
+  active).

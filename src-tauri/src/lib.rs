@@ -4,6 +4,12 @@ use tauri::{
     Manager, WindowEvent,
 };
 
+// The one place this crate holds real behaviour rather than plumbing, and macOS-only by nature
+// (ADR-0010): the panel is converted to a non-activating NSPanel so it can be drawn into another
+// app's full-screen Space.
+#[cfg(target_os = "macos")]
+mod floating_panel;
+
 /// Toggles the floating panel's visibility.
 fn toggle_panel(app: &tauri::AppHandle) {
     let Some(window) = app.get_webview_window("main") else {
@@ -21,7 +27,7 @@ fn toggle_panel(app: &tauri::AppHandle) {
 // Application logic belongs in src/ (TypeScript).
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         // Detection core: FS watching of ~/.claude-agents-widget/sessions and `ps` for the
         // process scanner. Both are scoped in capabilities/default.json.
         .plugin(tauri_plugin_fs::init())
@@ -33,11 +39,26 @@ pub fn run() {
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
-        ))
+        ));
+
+    // Both the plugin and the command it backs are macOS-only, so the registration is too.
+    #[cfg(target_os = "macos")]
+    let builder = builder
+        .plugin(tauri_nspanel::init())
+        .invoke_handler(tauri::generate_handler![
+            floating_panel::float_panel_above_full_screen
+        ]);
+
+    builder
         .setup(|app| {
             // Menu-bar-only app: no Dock icon, never takes over as the active app.
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
+            // After the activation policy and before the tray, so the panel is already an
+            // NSPanel by the time anything can reveal it.
+            #[cfg(target_os = "macos")]
+            floating_panel::convert(app.handle())?;
 
             let toggle = MenuItem::with_id(app, "toggle", "Show/Hide Panel", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
