@@ -5,10 +5,10 @@ working, and which one is waiting for me?**
 
 Agents get started from wherever you happen to be — a plain terminal, a VS Code or Cursor
 integrated terminal, Claude Desktop — and then you carry on with everything else: Slack, Chrome,
-a video call, actual code. The agents keep going in windows you can no longer see, and the ones
-that stopped to ask a permission question sit there silently until you happen to look. There is no
-single place that tells you who is running and who is blocked, and no quick way back to the right
-window.
+a video call, actual code. The agents keep going in windows you can no longer see. Notifications do
+fire when one stops, but with five or ten agents they all look alike: you get a ping without
+knowing which agent sent it or where that window is. There is no single place that tells you who is
+running and who is blocked, and no quick way back to the right window.
 
 That is what this is: a menu bar icon with the aggregate state (`3▶ 2⏸ 1✔`) and a compact panel you
 can park on any monitor, above every other window. The panel is split into **Running** (the agent
