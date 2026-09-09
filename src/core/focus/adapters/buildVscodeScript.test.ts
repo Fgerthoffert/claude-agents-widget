@@ -20,10 +20,23 @@ describe('buildVscodeScript', () => {
     expect(script?.source).toContain('perform action "AXRaise" of win');
   });
 
-  it('activates the app first, tolerating an Automation denial for the app itself', () => {
+  it('raises the window before bringing the app forward, so there is one transition', () => {
     const source = buildVscodeScript(target('/Users/test/proj'))?.source ?? '';
-    expect(source.indexOf('to activate')).toBeLessThan(source.indexOf('System Events'));
-    expect(source).toContain('try\n  tell application "Visual Studio Code" to activate\nend try');
+    expect(source.indexOf('AXRaise')).toBeLessThan(source.indexOf('frontmost'));
+  });
+
+  it('never tells the editor itself, so the happy path needs no second Automation grant', () => {
+    const source = buildVscodeScript(target('/Users/test/proj'))?.source ?? '';
+    expect(source).not.toContain('tell application "Visual Studio Code"');
+    expect(source).toContain('set frontmost of process "Code" to true');
+  });
+
+  it('still reports success when only the frontmost call fails', () => {
+    // Raising is the part that matters; a refused activation must not lose a good raise.
+    const source = buildVscodeScript(target('/Users/test/proj'))?.source ?? '';
+    expect(source).toContain(
+      'try\n            set frontmost of process "Code" to true\n          end try',
+    );
   });
 
   it('echoes a marker so "no matching window" is not confused with a failure', () => {

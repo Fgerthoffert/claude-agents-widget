@@ -39,6 +39,7 @@ describe('onSessionClick', () => {
       ok: true,
       method: 'window',
       permissionDenied: false,
+      degraded: false,
       detail: 'window',
     });
     expect(mocks.focusSession).toHaveBeenCalledWith(session);
@@ -57,6 +58,8 @@ describe('onSessionClick', () => {
       ok: true,
       method: 'app',
       permissionDenied: true,
+      // A fallback got there, so this proves nothing about the Accessibility grant.
+      degraded: true,
       detail: 'app',
     });
   });
@@ -68,7 +71,24 @@ describe('onSessionClick', () => {
       ok: false,
       method: null,
       permissionDenied: false,
+      degraded: false,
       detail: 'no-host',
+    });
+  });
+
+  it('marks window precision reached by a fallback as degraded, not as proof', async () => {
+    resolves({
+      ok: true,
+      host: 'vscode',
+      method: 'window',
+      degradedFrom: 'window-not-found',
+      detail: null,
+    });
+
+    await expect(onSessionClick(session)).resolves.toMatchObject({
+      ok: true,
+      method: 'window',
+      degraded: true,
     });
   });
 
@@ -90,6 +110,7 @@ describe('onSessionClick', () => {
       ok: false,
       method: null,
       permissionDenied: false,
+      degraded: false,
       detail: 'focus_engine_error',
     });
     expect(error).toHaveBeenCalledOnce();

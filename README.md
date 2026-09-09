@@ -11,9 +11,14 @@ knowing which agent sent it or where that window is. There is no single place th
 running and who is blocked, and no quick way back to the right window.
 
 That is what this is: a menu bar icon that marks itself (`●`) the moment any agent is waiting on
-you, and a compact panel you can park on any monitor, above every other window. The panel is split into **Running** (the agent
-is busy, nothing is expected of you) and **Waiting for you** (it stopped — either it needs a
-decision or it finished). Clicking a row raises the terminal or editor window that agent lives in.
+you, and a compact panel you can park on any monitor, above every other window. The panel is split
+into **Running** (the agent is busy, nothing is expected of you) and **Waiting for you** (it
+stopped — either it needs a decision or it finished).
+
+Clicking a row raises the terminal or editor window that agent lives in, and says so if it could
+not. However many agents are blocked, exactly one row is ever loud — the most recent one you have
+not been to yet — so the panel always has one answer to "what next" instead of a wall of
+highlights.
 
 <!-- Screenshot: add one here once the v0.1.0 build has been run on a real desktop. -->
 

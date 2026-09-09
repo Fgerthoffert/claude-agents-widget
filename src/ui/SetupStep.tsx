@@ -1,3 +1,5 @@
+import { Children } from 'react';
+
 import type { SetupStepStatus } from '../core/evaluateSetupState';
 import type { ReactNode } from 'react';
 
@@ -16,7 +18,15 @@ const LABELS: Readonly<Record<SetupStepStatus, string>> = {
   unknown: 'unknown',
 };
 
-/** One numbered step of the setup checklist: a heading, a status chip, and its own explanation. */
+/**
+ * One numbered step of the setup checklist: a heading, a status chip, and its own explanation.
+ *
+ * A step with nothing to say renders as the heading alone. That is how a finished step gets out
+ * of the way — the caller passes `null` once there is nothing left, and no empty body box is
+ * left behind to take up room in a 320px panel (ADR-0013). `Children.toArray` is what decides
+ * "nothing": a body built from conditionals arrives as an array of `null`s and `false`s, which
+ * is truthy, so testing `children` directly would keep rendering the box it is meant to drop.
+ */
 export const SetupStep = ({ index, title, status, children }: SetupStepProps) => (
   <li className="setup__step">
     <div className="setup__step-head">
@@ -26,6 +36,6 @@ export const SetupStep = ({ index, title, status, children }: SetupStepProps) =>
       <h2 className="setup__step-title">{title}</h2>
       <span className={`setup__chip setup__chip--${status}`}>{LABELS[status]}</span>
     </div>
-    <div className="setup__step-body">{children}</div>
+    {Children.toArray(children).length > 0 && <div className="setup__step-body">{children}</div>}
   </li>
 );

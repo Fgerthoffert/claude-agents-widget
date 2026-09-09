@@ -5,9 +5,16 @@ import type { FocusMethod } from './focus/types';
 /** How precise the last click was, and whether macOS refused it. */
 export interface LastFocusOutcome {
   readonly ok: boolean;
-  /** `window`/`tab` prove Accessibility consent; `app` proves nothing. */
+  /** How precisely the click landed. Only proves consent alongside `degraded === false`. */
   readonly method: FocusMethod | null;
   readonly permissionDenied: boolean;
+  /**
+   * True when the click only worked because a fallback picked it up. `open -b <bundle> <path>`
+   * can land on the exact window and so reports `method: 'window'`, but it needs no
+   * Accessibility grant at all — so without this flag a VS Code user who had never granted
+   * Accessibility was told step 2 was done, and never found out why their clicks were imprecise.
+   */
+  readonly degraded: boolean;
   /** Machine-readable method or failure reason, for the diagnostics dump. */
   readonly detail: string;
 }
@@ -62,9 +69,10 @@ export interface SetupState {
  * that registers us, and a partially-installed settings file (some events ours, some not)
  * reports as `todo` with the missing ones named rather than as an opaque failure.
  *
- * The macOS permission step is deliberately never `done` on faith. A click that reached
- * `window` or `tab` precision proves Accessibility consent was granted, a refused click proves
- * it was not, and anything else is `unknown`.
+ * The macOS permission step is deliberately never `done` on faith. Only an *undegraded* click
+ * that reached `window` or `tab` precision proves Accessibility consent was granted — the
+ * fallback that opens a folder reaches the same precision without it. A refused click proves
+ * consent is missing, and anything else is `unknown`.
  */
 export const evaluateSetupState = (probe: SetupProbe): SetupState => {
   const merge = mergeHookSettings(probe.settings ?? {}, probe.hookPath);
@@ -79,7 +87,7 @@ export const evaluateSetupState = (probe: SetupProbe): SetupState => {
       ? 'unknown'
       : focus.permissionDenied
         ? 'blocked'
-        : focus.ok && (focus.method === 'window' || focus.method === 'tab')
+        : focus.ok && !focus.degraded && (focus.method === 'window' || focus.method === 'tab')
           ? 'done'
           : 'unknown';
 

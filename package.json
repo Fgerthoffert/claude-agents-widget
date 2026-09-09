@@ -1,7 +1,7 @@
 {
   "name": "claude-agents-widget",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Always-on macOS menu bar icon + floating panel showing every local Claude Code session, with one-click window focusing.",
   "license": "Apache-2.0",
   "type": "module",

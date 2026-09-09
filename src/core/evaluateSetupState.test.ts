@@ -131,7 +131,9 @@ describe('evaluateSetupState', () => {
   it('marks permissions granted only when a click reached a window or tab', () => {
     const focused = (method: 'window' | 'tab' | 'app') =>
       evaluateSetupState(
-        probe({ lastFocus: { ok: true, method, permissionDenied: false, detail: method } }),
+        probe({
+          lastFocus: { ok: true, method, permissionDenied: false, degraded: false, detail: method },
+        }),
       ).permissions.status;
 
     expect(focused('window')).toBe('done');
@@ -140,10 +142,34 @@ describe('evaluateSetupState', () => {
     expect(focused('app')).toBe('unknown');
   });
 
+  it('does not read window precision reached by a fallback as proof of consent', () => {
+    // `open -b <bundle> <path>` can land on the exact window without any Accessibility grant,
+    // so claiming the step is done would hide the reason later clicks are imprecise.
+    const state = evaluateSetupState(
+      probe({
+        lastFocus: {
+          ok: true,
+          method: 'window',
+          permissionDenied: false,
+          degraded: true,
+          detail: 'window',
+        },
+      }),
+    );
+
+    expect(state.permissions.status).toBe('unknown');
+  });
+
   it('marks permissions blocked when macOS refused a click, even if it degraded to success', () => {
     const state = evaluateSetupState(
       probe({
-        lastFocus: { ok: true, method: 'app', permissionDenied: true, detail: 'app' },
+        lastFocus: {
+          ok: true,
+          method: 'app',
+          permissionDenied: true,
+          degraded: true,
+          detail: 'app',
+        },
       }),
     );
 

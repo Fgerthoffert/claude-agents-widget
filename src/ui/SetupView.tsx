@@ -25,17 +25,23 @@ interface SetupViewProps {
   readonly onClose: () => void;
 }
 
-const list = (events: readonly string[]): string => events.join(', ');
+const plural = (count: number, one: string, many: string): string => (count === 1 ? one : many);
 
 /**
  * The first-run guide and the permanent diagnostics view, in the same 320px panel.
  *
- * Three steps, in the order they block each other: without the hooks nothing is detected,
- * without the macOS grants a click cannot raise a window, and sessions that were already
- * running when the hooks were installed never fired one. Each step says what it will do
- * *before* offering the button that does it, which is the whole consent model — the install
- * writes to `~/.claude/settings.json`, so the user has to be able to see that first and read
- * the exact change if they want to (ADR-0009).
+ * **Two** steps, in the order they block each other: without the hooks nothing is detected, and
+ * without the macOS grant a click cannot raise a window. Each says what it will do *before*
+ * offering the button that does it, which is the whole consent model — the install writes to
+ * `~/.claude/settings.json` (ADR-0009).
+ *
+ * It used to say considerably more, and at 320px wide that made a wall of prose out of a job with
+ * two buttons in it (ADR-0013). What is left follows three rules. A step that is **done**
+ * collapses to its heading and chip: it is a receipt, not an instruction, and the space belongs
+ * to whatever is still outstanding. Reassurance — existing hooks kept, a backup written first —
+ * sits behind *Show the change*, which is where a suspicious user is already looking. And the old
+ * third step was never a step at all, because the user does nothing in the app to satisfy it; it
+ * is now one line of status under the list.
  *
  * Nothing here claims a permission is granted unless a real click proved it: macOS does not
  * expose the Accessibility grant to the app that needs it, and a green tick on faith would be
@@ -62,11 +68,6 @@ export const SetupView = ({
   return (
     <section className="setup" aria-label="Setup and diagnostics">
       <div className="setup__scroll">
-        <p className="setup__intro">
-          Two one-time steps: let Claude Code tell the widget what your agents are doing, and let
-          macOS raise their windows when you click a row.
-        </p>
-
         {/* Above the checklist: a broken pipeline invalidates every tick below it (ADR-0011). */}
         {health.failure !== null && (
           <p className="setup__outcome" role="alert">
@@ -93,22 +94,13 @@ export const SetupView = ({
                 <code>{settingsPath}</code> is not valid JSON, so nothing will be written to it. Fix
                 or move the file, then come back.
               </p>
-            ) : hooks.status === 'done' ? (
-              <p className="setup__text">
-                All five events call <code>{hookPath}</code>.
-              </p>
-            ) : (
+            ) : hooks.status === 'done' ? null : (
               <>
                 <p className="setup__text">
-                  Adds {hooks.missingEvents.length} entr
-                  {hooks.missingEvents.length === 1 ? 'y' : 'ies'} to <code>{settingsPath}</code>{' '}
-                  and copies the hook script to <code>{hookPath}</code>. Your existing hooks are
-                  kept exactly as they are, and a backup of the settings file is written first.
+                  Adds {hooks.missingEvents.length}{' '}
+                  {plural(hooks.missingEvents.length, 'entry', 'entries')} to{' '}
+                  <code>{settingsPath}</code> and copies the hook script to <code>{hookPath}</code>.
                 </p>
-                {hooks.registeredEvents.length > 0 && (
-                  <p className="setup__muted">Already registered: {list(hooks.registeredEvents)}</p>
-                )}
-                <p className="setup__muted">Will add: {list(hooks.missingEvents)}</p>
                 <div className="setup__actions">
                   <button
                     type="button"
@@ -130,7 +122,14 @@ export const SetupView = ({
                   </button>
                 </div>
                 {showChange && (
-                  <pre className="setup__preview">{preview ?? 'Nothing would change.'}</pre>
+                  <>
+                    <p className="setup__muted">
+                      Your existing hooks are kept exactly as they are, and a backup of{' '}
+                      <code>{settingsPath}</code> is written first. Adding:{' '}
+                      {hooks.missingEvents.join(', ')}.
+                    </p>
+                    <pre className="setup__preview">{preview ?? 'Nothing would change.'}</pre>
+                  </>
                 )}
               </>
             )}
@@ -138,68 +137,54 @@ export const SetupView = ({
           </SetupStep>
 
           <SetupStep index={2} title="Let macOS raise windows" status={permissions.status}>
-            <p className="setup__text">
-              Clicking a session runs a short AppleScript. macOS asks for <b>Automation</b> the
-              first time and remembers it. <b>Accessibility</b> is separate and cannot be prompted
-              for — it is what lets the widget walk VS Code and Cursor windows to find the right
-              one, and without it a click still raises the app, just not the exact window.
-            </p>
-            <div className="setup__actions">
-              <button
-                type="button"
-                className="setup__button"
-                onClick={() => {
-                  onOpenPane('automation');
-                }}
-              >
-                Open Automation
-              </button>
-              <button
-                type="button"
-                className="setup__button"
-                onClick={() => {
-                  onOpenPane('accessibility');
-                }}
-              >
-                Open Accessibility
-              </button>
-            </div>
-            <p className="setup__muted">
-              The grant is attached to this exact app bundle, so replacing the app — a new release,
-              a rebuild — means granting it again.
-            </p>
-            {permissions.status === 'blocked' && (
-              <p className="setup__outcome">
-                macOS refused the last click ({permissions.lastFocus?.detail ?? 'permission-denied'}
-                ). Tick <b>Claude Agents Widget</b> under Accessibility, then click a row again.
-              </p>
-            )}
-            {permissions.status === 'done' && (
-              <p className="setup__muted">The last click landed on the exact window.</p>
-            )}
-          </SetupStep>
-
-          <SetupStep index={3} title="Restart running agents" status={sessions.status}>
-            {sessions.status === 'done' ? (
-              <p className="setup__text">
-                {sessions.hookOwned} of {sessions.total} session
-                {sessions.total === 1 ? '' : 's'} are reporting through the hooks.
-              </p>
-            ) : sessions.status === 'todo' ? (
-              <p className="setup__text">
-                {sessions.total} session{sessions.total === 1 ? '' : 's'} found by the process
-                scanner, none reporting through the hooks. Hooks only apply to sessions started
-                afterwards — restart them and they will report precisely, including{' '}
-                <i>needs input</i>.
-              </p>
-            ) : (
-              <p className="setup__text">
-                No agents running right now. Start one and it appears in the panel within a couple
-                of seconds.
-              </p>
+            {permissions.status === 'done' ? null : (
+              <>
+                <p className="setup__text">
+                  <b>Accessibility</b> is what lets a click land on the exact window. Without it a
+                  click still raises the app, just not the right window.
+                </p>
+                <div className="setup__actions">
+                  <button
+                    type="button"
+                    className="setup__button"
+                    onClick={() => {
+                      onOpenPane('accessibility');
+                    }}
+                  >
+                    Open Accessibility
+                  </button>
+                  <button
+                    type="button"
+                    className="setup__button"
+                    onClick={() => {
+                      onOpenPane('automation');
+                    }}
+                  >
+                    Open Automation
+                  </button>
+                </div>
+                {permissions.status === 'blocked' && (
+                  <p className="setup__outcome">
+                    macOS refused the last click (
+                    {permissions.lastFocus?.detail ?? 'permission-denied'}). Tick{' '}
+                    <b>Claude Agents Widget</b> under Accessibility, then click a row again. The
+                    grant is attached to this exact app bundle, so replacing the app — a new
+                    release, a rebuild — means granting it again.
+                  </p>
+                )}
+              </>
             )}
           </SetupStep>
         </ol>
+
+        {/* Not a step: nothing the user does in this app satisfies it (ADR-0013). */}
+        <p className="setup__status">
+          {sessions.status === 'done'
+            ? `${String(sessions.hookOwned)} of ${String(sessions.total)} ${plural(sessions.total, 'session', 'sessions')} reporting through the hooks.`
+            : sessions.status === 'todo'
+              ? `${String(sessions.total)} ${plural(sessions.total, 'session', 'sessions')} found by the process scanner, none reporting through the hooks — restart them for precise states.`
+              : 'No agents running right now.'}
+        </p>
       </div>
 
       <footer className="setup__footer">

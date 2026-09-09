@@ -93,6 +93,7 @@ describe('formatDiagnostics', () => {
             ok: false,
             method: null,
             permissionDenied: true,
+            degraded: false,
             detail: 'permission-denied',
           },
         },

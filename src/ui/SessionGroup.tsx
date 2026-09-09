@@ -14,6 +14,10 @@ interface SessionGroupProps {
   readonly label: string;
   readonly rows: readonly GroupRow[];
   readonly attention: boolean;
+  /** The single session the panel is shouting about, if it is in this group. */
+  readonly loudSessionId: string | null;
+  /** The session whose click is still being acted on, if it is in this group. */
+  readonly pendingSessionId: string | null;
   readonly onSelect: (session: Session) => void;
 }
 
@@ -27,7 +31,14 @@ interface SessionGroupProps {
  * counts, not in a header above everything (ADR-0008). `aria-label` gives the section a name, so
  * a screen reader announces which half of the panel it has moved into.
  */
-export const SessionGroup = ({ label, rows, attention, onSelect }: SessionGroupProps) => (
+export const SessionGroup = ({
+  label,
+  rows,
+  attention,
+  loudSessionId,
+  pendingSessionId,
+  onSelect,
+}: SessionGroupProps) => (
   <section className="group" aria-label={label} data-tauri-drag-region>
     <h2
       className={`group__heading${attention ? ' group__heading--attention' : ''}`}
@@ -43,6 +54,8 @@ export const SessionGroup = ({ label, rows, attention, onSelect }: SessionGroupP
           session={session}
           description={description}
           age={age}
+          loud={session.sessionId === loudSessionId}
+          pending={session.sessionId === pendingSessionId}
           onSelect={onSelect}
         />
       ))}

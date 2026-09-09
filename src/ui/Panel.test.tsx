@@ -52,6 +52,7 @@ beforeEach(() => {
     ok: true,
     method: 'window',
     permissionDenied: false,
+    degraded: false,
     detail: 'window',
   });
   mocks.togglePanelVisibility.mockReset();
@@ -95,21 +96,132 @@ describe('Panel', () => {
     expect(screen.getByText('api')).toHaveClass('row__title');
   });
 
-  it('marks a needs-input row as the one that needs attention', () => {
+  it('marks every blocked row and shouts about only the most recent one', () => {
     renderPanel([
       session({
         sessionId: 'a',
-        title: 'Blocked',
+        title: 'Newest',
         state: 'needs_input',
         notificationType: 'permission_prompt',
+        updatedAt: new Date(NOW - 1_000).toISOString(),
       }),
-      session({ sessionId: 'b', title: 'Busy' }),
+      session({
+        sessionId: 'b',
+        title: 'Older',
+        state: 'needs_input',
+        updatedAt: new Date(NOW - 60_000).toISOString(),
+      }),
+      session({ sessionId: 'c', title: 'Busy' }),
     ]);
 
-    expect(rowByName(/^Blocked/)).toHaveClass('row--attention');
-    expect(rowByName(/^Blocked/)).toHaveAttribute('data-state', 'needs_input');
-    expect(rowByName(/^Busy/)).not.toHaveClass('row--attention');
+    // Marked: both blocked rows carry the accent bar and the amber reason.
+    expect(rowByName(/^Newest/)).toHaveClass('row--blocked');
+    expect(rowByName(/^Older/)).toHaveClass('row--blocked');
+    expect(rowByName(/^Busy/)).not.toHaveClass('row--blocked');
+
+    // Loud: exactly one, and it is the first the store gave, which is the most recent.
+    expect(rowByName(/^Newest/)).toHaveClass('row--loud');
+    expect(rowByName(/^Older/)).not.toHaveClass('row--loud');
+    expect(rowByName(/^Newest/)).toHaveAttribute('data-state', 'needs_input');
     expect(screen.getByText('needs permission · /Users/test/code/api')).toBeInTheDocument();
+  });
+
+  it('stops shouting about a session once the user has been to it', async () => {
+    const user = userEvent.setup();
+    renderPanel([
+      session({
+        sessionId: 'a',
+        title: 'Newest',
+        state: 'needs_input',
+        updatedAt: new Date(NOW - 1_000).toISOString(),
+      }),
+      session({
+        sessionId: 'b',
+        title: 'Older',
+        state: 'needs_input',
+        updatedAt: new Date(NOW - 60_000).toISOString(),
+      }),
+    ]);
+
+    await user.click(rowByName(/^Newest/));
+
+    // Calm, but still marked — it is still blocked, the user just knows about it now.
+    expect(rowByName(/^Newest/)).not.toHaveClass('row--loud');
+    expect(rowByName(/^Newest/)).toHaveClass('row--blocked');
+    // The loud slot passes to the next one the user has not seen.
+    expect(rowByName(/^Older/)).toHaveClass('row--loud');
+  });
+
+  it('shouts again when an acknowledged session does something new', async () => {
+    const user = userEvent.setup();
+    const blocked = (updatedAt: string) =>
+      session({ sessionId: 'a', title: 'Blocked', state: 'needs_input', updatedAt });
+
+    renderPanel([blocked(new Date(NOW - 60_000).toISOString())]);
+    await user.click(rowByName(/^Blocked/));
+    expect(rowByName(/^Blocked/)).not.toHaveClass('row--loud');
+
+    // A new hook event moves updatedAt on, so the acknowledgement no longer covers it.
+    cleanup();
+    renderPanel([blocked(new Date(NOW).toISOString())]);
+    expect(rowByName(/^Blocked/)).toHaveClass('row--loud');
+  });
+
+  it('says what happened when a click could not reach the window', async () => {
+    const user = userEvent.setup();
+    mocks.onSessionClick.mockResolvedValue({
+      ok: false,
+      method: null,
+      permissionDenied: false,
+      degraded: false,
+      detail: 'window-not-found',
+    });
+    renderPanel([session({ sessionId: 'a', title: 'Blocked', state: 'needs_input' })]);
+
+    await user.click(rowByName(/^Blocked/));
+
+    expect(await screen.findByRole('status')).toHaveTextContent(/window is gone/i);
+  });
+
+  it('stays quiet when the click did exactly what the row promised', async () => {
+    const user = userEvent.setup();
+    renderPanel([session({ sessionId: 'a', title: 'Busy' })]);
+
+    await user.click(rowByName(/^Busy/));
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('ignores a second press while the first click is still being acted on', async () => {
+    const user = userEvent.setup();
+    let release = (): void => undefined;
+    mocks.onSessionClick.mockReturnValue(
+      new Promise((resolve) => {
+        release = () => {
+          resolve({
+            ok: true,
+            method: 'window',
+            permissionDenied: false,
+            degraded: false,
+            detail: 'window',
+          });
+        };
+      }),
+    );
+    renderPanel([session({ sessionId: 'a', title: 'Busy' })]);
+
+    await user.click(rowByName(/^Busy/));
+    expect(rowByName(/^Busy/)).toHaveAttribute('aria-busy', 'true');
+
+    await user.click(rowByName(/^Busy/));
+    expect(mocks.onSessionClick).toHaveBeenCalledTimes(1);
+
+    // The promise resolves synchronously; act() flushes the state updates it triggers.
+    await act(() => {
+      release();
+      return Promise.resolve();
+    });
+    expect(rowByName(/^Busy/)).toHaveAttribute('aria-busy', 'false');
   });
 
   it('leaves ended sessions out: the process is gone, so there is nothing to go back to', () => {
