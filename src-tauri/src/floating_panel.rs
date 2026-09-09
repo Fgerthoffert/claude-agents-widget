@@ -49,7 +49,7 @@ fn assert_floating(panel: &PanelHandle<Wry>) {
             .into(),
     );
     // Last, and after any `setAlwaysOnTop` on the TypeScript side: that call rewrites the level
-    // back down to NSFloatingWindowLevel (3).
+    // back down to the floating level, which is below the full-screen menu bar.
     panel.set_level(PanelLevel::Status.value());
 }
 
@@ -69,6 +69,10 @@ pub fn convert(app: &AppHandle) -> tauri::Result<()> {
     // A floating `NSPanel` otherwise vanishes whenever the owning app deactivates — which, for
     // an accessory-policy app that is never active, would mean "always".
     panel.set_hides_on_deactivate(false);
+    // Keeps a click from taking key focus, which would activate this app and deactivate the one
+    // the user is working in. Only useful together with `acceptFirstMouse` in tauri.conf.json,
+    // which is what still gets that click through to the webview.
+    panel.set_becomes_key_only_if_needed(true);
 
     assert_floating(&panel);
 
