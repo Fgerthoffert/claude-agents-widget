@@ -31,6 +31,12 @@ tauri-plugin-store = "2"
 tauri-plugin-process = "2"
 tauri-plugin-autostart = "2"
 
+# Floating above other apps' full-screen Spaces (ADR-0010) needs the panel window to *be* an
+# NSPanel, which is unreachable from TypeScript and from Tauri's window API. Not published to
+# crates.io, so it is pinned by revision rather than tracking the `v2.1` branch head.
+[target.'cfg(target_os = "macos")'.dependencies]
+tauri-nspanel = { git = "https://github.com/ahkohd/tauri-nspanel", rev = "c9ec2130422200f0863b23dfdad02b133a529b07" }
+
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]
