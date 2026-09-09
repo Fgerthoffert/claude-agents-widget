@@ -158,7 +158,6 @@ Two things cannot be verified in CI and are covered by `docs/ui-smoke-checklist.
 whether always-on-top actually survives a macOS full-screen space, and whether the restored
 position lands correctly across a real monitor change.
 
-Also unresolved until Phase 4 lands: clicking a row calls `src/ui/onSessionClick.ts`, which is a
-seam with a stub body and a documented one-line wiring point. Until then a click warns and does
-nothing, which the PRD forbids permanently ("a click must never be a no-op") — hence a seam, not
-a decision.
+Clicking a row calls `src/ui/onSessionClick.ts`, which was a seam with a stub body until Phase 4
+landed. It now flattens the focus engine's typed `FocusResult` into `{ok, detail}` — see
+ADR-0007.

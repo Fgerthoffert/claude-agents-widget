@@ -67,6 +67,31 @@
           "name": "lsof-cwd",
           "cmd": "/usr/sbin/lsof",
           "args": ["-a", "-d", "cwd", "-Fn", "-p", { "validator": "^[0-9,]+$" }]
+        },
+        {
+          "name": "ps-tty",
+          "cmd": "/bin/ps",
+          "args": ["-o", "tty=", "-p", { "validator": "^[0-9]+$" }]
+        },
+        {
+          "name": "osascript",
+          "cmd": "/usr/bin/osascript",
+          "args": [
+            "-e",
+            {
+              "validator": "-- claude-agents-widget focus\\n[\\s\\S]*"
+            }
+          ]
+        },
+        {
+          "name": "open-bundle",
+          "cmd": "/usr/bin/open",
+          "args": ["-b", { "validator": "[A-Za-z0-9][A-Za-z0-9._-]*" }]
+        },
+        {
+          "name": "open-bundle-path",
+          "cmd": "/usr/bin/open",
+          "args": ["-b", { "validator": "[A-Za-z0-9][A-Za-z0-9._-]*" }, { "validator": "/[^\\n]*" }]
         }
       ]
     }
