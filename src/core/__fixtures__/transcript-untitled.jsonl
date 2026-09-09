@@ -1,0 +1,4 @@
+{"type":"user","cwd":"/Users/test/proj","sessionId":"sess-3","isMeta":true,"message":{"role":"user","content":"<command-message>plan is running…</command-message>"},"uuid":"66666666-6666-6666-6666-666666666666","timestamp":"2026-09-09T12:10:00.000Z"}
+{"type":"user","cwd":"/Users/test/proj","sessionId":"sess-3","promptSource":"typed","message":{"role":"user","content":[{"type":"text","text":"Please investigate why the always-on-top panel loses its position after a display change and propose a fix"}]},"uuid":"77777777-7777-7777-7777-777777777777","timestamp":"2026-09-09T12:10:01.000Z"}
+{"type":"assistant","cwd":"/Users/test/proj","sessionId":"sess-3","message":{"role":"assistant","content":[{"type":"text","text":"Looking into it."}]},"uuid":"88888888-8888-8888-8888-888888888888","timestamp":"2026-09-09T12:10:02.000Z"}
+{"type":"user","cwd":"/Users/test/proj","sessionId":"sess-3","message":{"role":"user","cont

@@ -20,15 +20,17 @@ const STATE_DIR_NAME = '.claude-agents-widget';
 
 /**
  * Hook event -> session state. Events absent from this map leave the state untouched.
- * @type {Record<string, string>}
+ * A Map, not an object literal: the event name arrives in a JSON payload, and a plain-object
+ * lookup would resolve `toString` or `constructor` to an inherited value.
+ * @type {Map<string, string>}
  */
-const EVENT_STATE = {
-  SessionStart: 'working',
-  UserPromptSubmit: 'working',
-  Stop: 'done_idle',
-  Notification: 'needs_input',
-  SessionEnd: 'ended',
-};
+const EVENT_STATE = new Map([
+  ['SessionStart', 'working'],
+  ['UserPromptSubmit', 'working'],
+  ['Stop', 'done_idle'],
+  ['Notification', 'needs_input'],
+  ['SessionEnd', 'ended'],
+]);
 
 const widgetHome = () => join(homedir(), STATE_DIR_NAME);
 
@@ -238,7 +240,8 @@ const main = () => {
     sessionId,
     cwd: asString(payload.cwd) ?? asString(existing.cwd),
     transcriptPath: asString(payload.transcript_path) ?? asString(existing.transcriptPath),
-    state: (event === null ? null : EVENT_STATE[event]) ?? asString(existing.state) ?? 'working',
+    state:
+      (event === null ? null : EVENT_STATE.get(event)) ?? asString(existing.state) ?? 'working',
     lastEvent: event ?? asString(existing.lastEvent),
     // Notification carries `notification_type` (permission_prompt, idle_prompt, …); older
     // Claude Code builds sent a human-readable `message`. Keep whichever arrives, and clear
