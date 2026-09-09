@@ -59,29 +59,21 @@ body {
 
 .panel__header {
   display: flex;
-  height: 26px;
+  height: 24px;
   flex: none;
   align-items: center;
   justify-content: space-between;
-  padding: 0 4px 0 10px;
+  padding: 0 4px 0 8px;
   border-bottom: 1px solid var(--panel-border);
   /* Reads as a handle without spending a row on a title bar. */
   cursor: grab;
 }
 
-.panel__aggregate {
-  overflow: hidden;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--panel-muted);
-}
-
-.panel__aggregate--attention {
-  font-weight: 600;
-  color: var(--state-needs-input);
+.panel__grip {
+  width: 28px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--panel-border);
 }
 
 .panel__hide {
@@ -106,23 +98,68 @@ body {
   background: var(--panel-hover);
 }
 
-/* ---- Session list ----------------------------------------------------------------------- */
+/* ---- Sections: running on top, waiting on the user below -------------------------------- */
 
-.panel__list {
+.panel__groups {
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+/* Each section takes the height its rows need, up to its share of the panel, and scrolls
+   inside that — so a long list on one side cannot squeeze the other out of view. */
+.group {
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+  flex: 0 1 auto;
+  flex-direction: column;
+}
+
+.group + .group {
+  border-top: 1px solid var(--panel-border);
+}
+
+.group__heading {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  padding: 5px 8px 3px;
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--panel-muted);
+}
+
+.group__heading--attention {
+  color: var(--state-needs-input);
+}
+
+.group__count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.group__list {
   overflow-x: hidden;
   overflow-y: auto;
   min-height: 0;
   margin: 0;
-  padding: 2px 0;
-  flex: 1;
+  padding: 0 0 2px;
   list-style: none;
 }
 
-.panel__list::-webkit-scrollbar {
+.group__list::-webkit-scrollbar {
   width: 6px;
 }
 
-.panel__list::-webkit-scrollbar-thumb {
+.group__list::-webkit-scrollbar-thumb {
   border-radius: 3px;
   background: var(--panel-border);
 }
@@ -164,8 +201,8 @@ body {
   height: 32px;
   align-items: center;
   gap: 8px;
-  grid-template-columns: 7px minmax(0, 1fr) auto;
-  padding: 0 8px 0 7px;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  padding: 0 8px 0 6px;
   border: 0;
   border-left: 2px solid transparent;
   font: inherit;
@@ -184,11 +221,10 @@ body {
   outline-offset: -2px;
 }
 
-.row__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--state-done-idle);
+.row__emoji {
+  font-size: 11px;
+  line-height: 1;
+  text-align: center;
 }
 
 .row__body {
@@ -217,17 +253,33 @@ body {
 }
 
 .row__age {
+  display: flex;
   flex: none;
+  gap: 3px;
+  align-items: baseline;
   font-size: 10.5px;
   font-variant-numeric: tabular-nums;
   color: var(--panel-muted);
 }
 
-/* ---- Per-state emphasis ----------------------------------------------------------------- */
-
-.row[data-state='working'] .row__dot {
-  background: var(--state-working);
+.row__age-icon {
+  font-size: 8px;
+  line-height: 1.4;
 }
+
+/* Same number, opposite meanings: how long the agent has been processing, or how long nothing
+   has happened. Play against pause, accent against muted, semibold against regular — three
+   channels, so the two can never be read as each other (ADR-0008). */
+.row__age--active {
+  font-weight: 600;
+  color: var(--state-working);
+}
+
+.row__age--active .row__age-icon {
+  font-size: 7px;
+}
+
+/* ---- Per-state emphasis ----------------------------------------------------------------- */
 
 /* The one loud thing on the panel: a needs-input row must be impossible to miss from a
    desk away, so it gets the accent bar, the wash and the only animation in the UI. */
@@ -241,9 +293,9 @@ body {
   box-shadow: inset 0 0 0 999px var(--panel-hover);
 }
 
-.row--attention .row__dot {
-  background: var(--state-needs-input);
+.row--attention .row__emoji {
   animation: row-pulse 2s ease-out infinite;
+  border-radius: 50%;
 }
 
 .row--attention .row__title {
@@ -270,18 +322,36 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .row--attention .row__dot {
+  .row--attention .row__emoji {
     animation: none;
   }
 }
 
-/* Ended sessions stay for five minutes so a finished agent does not vanish mid-glance
-   (ADR-0008), but they must not read as live. */
-.row[data-state='ended'] {
-  opacity: 0.45;
+/* ---- Legend: the key to the row glyphs -------------------------------------------------- */
+
+.panel__legend {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 8px 5px;
+  border-top: 1px solid var(--panel-border);
+  font-size: 9.5px;
+  line-height: 12px;
+  color: var(--panel-muted);
 }
 
-.row[data-state='ended'] .row__dot {
-  border: 1px solid var(--state-done-idle);
-  background: transparent;
+.panel__legend-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.panel__legend-item {
+  white-space: nowrap;
+}
+
+.panel__legend-item--active {
+  font-weight: 600;
+  color: var(--state-working);
 }
