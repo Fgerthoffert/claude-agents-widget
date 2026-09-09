@@ -20,6 +20,8 @@
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "install-hooks": "node --experimental-strip-types scripts/installHooks.ts",
+    "check-versions": "node --experimental-strip-types scripts/checkVersions.ts",
+    "release-notes": "node --experimental-strip-types scripts/releaseNotes.ts",
     "preview:ui": "vite --port 1430 --open /preview.html"
   },
   "dependencies": {

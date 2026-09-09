@@ -1,0 +1,87 @@
+name: Main
+
+# Every merge to main produces a downloadable dev build, so "try the current main" never means
+# "clone the repo and install Rust". It never creates a tag or a release — that is release.yml.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: main-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    uses: ./.github/workflows/quality.yml
+
+  dev-build:
+    name: macOS dev build
+    needs: quality
+    # macos-latest is Apple Silicon, and v1 ships aarch64 only (ADR-0009).
+    runs-on: macos-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable, 2026-09-03
+        with:
+          toolchain: stable
+          targets: aarch64-apple-darwin
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      - name: Name the build after the commit
+        id: meta
+        run: echo "sha=$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+
+      # Unsigned: no Apple credentials are used here even when they exist, because a dev build
+      # is not a release. Gatekeeper therefore blocks a double-click — see the README.
+      - name: Build the app bundle
+        run: npm run tauri build -- --target aarch64-apple-darwin
+
+      # actions/upload-artifact zips what it is given, and a zip does not preserve the symlinks
+      # and executable bits inside a .app. Tarring it first keeps the bundle launchable.
+      - name: Archive the .app bundle
+        env:
+          SHA: ${{ steps.meta.outputs.sha }}
+        run: |
+          tar -czf "claude-agents-widget-${SHA}-aarch64.app.tar.gz" \
+            -C src-tauri/target/aarch64-apple-darwin/release/bundle/macos \
+            "Claude Agents Widget.app"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: claude-agents-widget-${{ steps.meta.outputs.sha }}-aarch64
+          path: |
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            claude-agents-widget-*-aarch64.app.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Summarise
+        env:
+          SHA: ${{ steps.meta.outputs.sha }}
+        run: |
+          {
+            echo "### Dev build \`${SHA}\` (aarch64, unsigned)"
+            echo
+            echo 'Download the artifact below, then either right-click the app → **Open**, or:'
+            echo
+            echo '```sh'
+            echo "xattr -dr com.apple.quarantine '/Applications/Claude Agents Widget.app'"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
