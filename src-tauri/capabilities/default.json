@@ -91,11 +91,7 @@
         {
           "name": "open-bundle-path",
           "cmd": "/usr/bin/open",
-          "args": [
-            "-b",
-            { "validator": "[A-Za-z0-9][A-Za-z0-9._-]*" },
-            { "validator": "/[^\\n]*" }
-          ]
+          "args": ["-b", { "validator": "[A-Za-z0-9][A-Za-z0-9._-]*" }, { "validator": "/[^\\n]*" }]
         }
       ]
     }
