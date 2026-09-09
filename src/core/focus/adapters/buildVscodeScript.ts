@@ -24,10 +24,17 @@ const titleCandidates = (cwd: string): readonly string[] =>
  *
  * VS Code exposes no AppleScript window API (verified: `get name of every window` fails with
  * -1728), so the only window-level route is `System Events` + `AXRaise`, which needs macOS
- * Accessibility consent. `activate` is attempted first and tolerated failing, so an Automation
- * denial for VS Code itself still leaves the Accessibility attempt — and any real permission
- * error surfaces on stderr instead of being swallowed, because Phase 5's first-run guide needs
- * to see it. Tab-level precision inside a window is out of scope (ADR-0007).
+ * Accessibility consent. Any real permission error surfaces on stderr instead of being
+ * swallowed, because the first-run guide needs to see it. Tab-level precision inside a window is
+ * out of scope (ADR-0007).
+ *
+ * The app is brought forward **after** the right window is raised, and through System Events
+ * rather than `tell application "Visual Studio Code" to activate`. Activating first was two
+ * visible transitions — whatever window VS Code last had comes forward, then the correct one
+ * replaces it — which is exactly the flicker a click is supposed to avoid. Going through the
+ * process the script already holds also means the happy path needs Accessibility and nothing
+ * else: no second Automation prompt for the editor itself. Raising is the part that matters, so
+ * a `frontmost` that fails still reports success (ADR-0013).
  *
  * Titles are matched in two passes. A VS Code title reads `file.ts — workspaceRoot`, so pass one
  * compares whole separator-delimited names and refuses a partial hit — without it, a session in
@@ -49,9 +56,6 @@ export const buildVscodeScript = (target: FocusTarget): FocusScript | null => {
       `set candidates to {${list}}`,
       // U+2014 by character id, so this builder emits pure ASCII.
       `set sep to " " & (character id 8212) & " "`,
-      `try`,
-      `  tell application "${escapeAppleScriptString(appName)}" to activate`,
-      `end try`,
       `tell application "System Events"`,
       `  set wins to windows of process "${escapeAppleScriptString(processName)}"`,
       `  repeat with pass in {1, 2}`,
@@ -69,6 +73,9 @@ export const buildVscodeScript = (target: FocusTarget): FocusScript | null => {
       `        end try`,
       `        if matched then`,
       `          perform action "AXRaise" of win`,
+      `          try`,
+      `            set frontmost of process "${escapeAppleScriptString(processName)}" to true`,
+      `          end try`,
       `          return "window"`,
       `        end if`,
       `      end repeat`,

@@ -77,7 +77,6 @@ describe('focusSessionWithRunner', () => {
   it('degrades all the way to app activation rather than doing nothing', async () => {
     const { run, calls } = runnerFor({
       osascript: ok('none'),
-      'open-bundle-path': fail('open: cannot open'),
       'open-bundle': ok(),
     });
     await expect(focusSessionWithRunner(session(), run)).resolves.toEqual({
@@ -87,7 +86,24 @@ describe('focusSessionWithRunner', () => {
       degradedFrom: 'window-not-found',
       detail: null,
     });
-    expect(calls).toEqual(['osascript', 'open-bundle-path', 'open-bundle']);
+    // No `open-bundle-path`: the adapter looked and there is no such window, so opening the
+    // folder could only make a new one. Activation is the honest degradation (ADR-0013).
+    expect(calls).toEqual(['osascript', 'open-bundle']);
+  });
+
+  it('still opens the folder when the precise attempt failed for an unrelated reason', async () => {
+    // A timeout says nothing about whether the window exists, so the folder step is still worth
+    // trying — unlike `window-not-found`, which answers the question.
+    const { run, calls } = runnerFor({
+      osascript: { code: null, stdout: '', stderr: 'osascript timed out' },
+      'open-bundle-path': ok(),
+    });
+    await expect(focusSessionWithRunner(session(), run)).resolves.toMatchObject({
+      ok: true,
+      method: 'window',
+      degradedFrom: 'timeout',
+    });
+    expect(calls).toEqual(['osascript', 'open-bundle-path']);
   });
 
   it('looks up the tty for a terminal host and reports the tab', async () => {

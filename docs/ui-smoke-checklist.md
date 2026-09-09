@@ -58,9 +58,19 @@ npm run tauri dev
 
 - [ ] Ten concurrent sessions: every row shows a **name**, not a path or an id. Scroll works, the
       header stays put.
-- [ ] Step back from the desk. The `needs_input` row is identifiable without reading — accent bar,
-      amber dot, tint.
-- [ ] Exactly one state is loud. `working` and `done_idle` rows are quiet.
+- [ ] Step back from the desk. The `needs_input` row is identifiable without reading — accent
+      pill, amber reason, tint.
+- [ ] Exactly **one row** is loud (wash + pulsing glyph), not one state (ADR-0013). Block a second
+      session: the first keeps its accent pill and amber reason but loses the wash and the pulse,
+      and it does not move or change size while doing so.
+- [ ] The loud row is the most recently blocked one.
+- [ ] Click the loud row. It goes calm — accent pill only — and the loud treatment moves to the
+      next blocked session you have not been to.
+- [ ] Answer nothing, go back to that session in its terminal and let it prompt you again: it is
+      loud a second time. (Acknowledgement is per event, not per session.)
+- [ ] Quit and relaunch the widget with a session still blocked: it is loud again. Acknowledgement
+      is deliberately not persisted.
+- [ ] `working` and `done_idle` rows carry no accent pill at all.
 - [ ] A session with a very long title truncates with an ellipsis on one line; hovering shows the
       full title, notification message and path.
 - [ ] A session with no title yet shows the project directory name instead.
@@ -72,6 +82,26 @@ npm run tauri dev
 - [ ] An ended session (close its terminal) disappears from the panel rather than lingering —
       ADR-0008's revision overturned the original "dim it at the bottom" decision.
 - [ ] Toggle macOS Appearance between Light and Dark: both are legible; nothing is grey-on-grey.
+- [ ] Park the panel over something bright and busy — a photo, a colourful web page. Titles, paths
+      and the setup step numbers all stay readable through the glass.
+- [ ] Grow the list past the window height. Rows do not shift sideways as the scrollbar appears:
+      macOS's overlay scrollbar floats over them rather than taking width (ADR-0013).
+
+## Clicking a row
+
+- [ ] A click that lands on the exact window shows **no** message. Silence is the success case.
+- [ ] While a click is being acted on, that row shows a spinner where its age was, and pressing it
+      again does nothing until the first attempt finishes.
+- [ ] Revoke Accessibility for the widget, then click a VS Code session: the app comes forward, and
+      a one-line notice says the exact window could not be reached and names the grant. It clears
+      itself after a few seconds, or on its `✕`.
+- [ ] Close a session's terminal window without ending the session, then click its row: the notice
+      says the window is gone. **No new editor window is opened** — the folder-opening fallback is
+      skipped once the window is known to be absent (ADR-0013).
+- [ ] With Accessibility granted, click a VS Code session in a window that is not frontmost: the
+      correct window comes forward in one movement, with no flash of a different window first.
+- [ ] Click a session in a repo whose name is a prefix of a sibling's (`cortex` next to
+      `cortex-joe`): the right window comes forward, not the sibling.
 
 ## Tray
 
@@ -100,9 +130,11 @@ hooks: use a throwaway account, or move `~/.claude/settings.json` aside and put 
 
 - [ ] With no widget entries in `~/.claude/settings.json`, the panel opens on the **Setup** view,
       not on the session list — and it does not flash the session list first.
-- [ ] Step 1 names `~/.claude/settings.json`, says existing hooks are kept and a backup is written,
-      and lists the five events it will add.
-- [ ] **Show the change** prints the JSON that would be written; hiding it again works.
+- [ ] Step 1 names `~/.claude/settings.json` and how many entries it will add, and offers its two
+      buttons without a paragraph in front of them.
+- [ ] **Show the change** prints the JSON that would be written, _and_ the reassurance that
+      existing hooks are kept and a backup is written first, and the events it will add; hiding it
+      again works (ADR-0013).
 - [ ] **Install hooks** → the button reads `Installing…`, then a sentence appears saying how many
       events were registered and that running sessions need a restart.
 - [ ] `~/.claude-agents-widget/hook.mjs` exists and is byte-identical to `hooks/claude-agents-widget-hook.mjs`.
@@ -111,14 +143,23 @@ hooks: use a throwaway account, or move `~/.claude/settings.json` aside and put 
 - [ ] Pressing **Install hooks** again reports "already installed" and changes nothing.
 - [ ] With a deliberately corrupted `settings.json` (`echo '{' > …`), step 1 reads `blocked`, offers
       no install button, and the file is left exactly as it was.
-- [ ] Start a fresh Claude Code session: step 3 flips to `done` and the row appears in the panel.
+- [ ] There are **two** numbered steps, not three. Session reporting is one line of status under
+      them, with no number and no chip.
+- [ ] Start a fresh Claude Code session: that status line switches to the "N of M sessions
+      reporting through the hooks" wording, and the row appears in the panel.
+- [ ] Once step 1 is `done` it collapses to its heading and chip — no body, no leftover blank box.
+      Same for step 2 once a precise click has proved the grant.
 - [ ] The **empty state** (no sessions, no hooks) shows an `Install hook` button — not a terminal
       command. Once the hooks are in and nothing is running, it reads "No agents running right now".
 - [ ] Tray → `Setup / Diagnostics` reopens the view and reveals the panel if it was hidden.
 - [ ] `Done` returns to the session list and stays there.
 - [ ] **Open Automation** and **Open Accessibility** each open the right System Settings pane.
 - [ ] With Accessibility **not** granted, click a row: it raises the app, and step 2 flips to
-      `blocked` naming `permission-denied`. Grant it, click again: step 2 flips to `done`.
+      `blocked` naming `permission-denied`, and only then explains that the grant is tied to this
+      app bundle. Grant it, click again: step 2 flips to `done`.
+- [ ] A click that only reached its window via the folder-opening fallback leaves step 2 at
+      `unknown`, not `done` — that fallback needs no Accessibility grant, so it proves nothing
+      about one (ADR-0013).
 - [ ] **Copy diagnostics** puts a readable block on the clipboard containing the app version and
       the hook status — and **no session titles or project paths**.
 

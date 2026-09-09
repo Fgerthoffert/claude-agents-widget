@@ -1,36 +1,158 @@
+/* ==========================================================================================
+   claude-agents-widget — panel surface
+   ------------------------------------------------------------------------------------------
+   One stylesheet for the floating panel, the setup view and the browser preview harness.
+
+   The design language is macOS Liquid Glass (ADR-0008, refined in ADR-0013): a translucent
+   material that takes its colour from whatever is behind the window, a specular hairline where
+   the light catches its edge, and content that floats on it rather than sitting in boxes drawn
+   on it. Everything is driven from the token block below — three radii, one spacing step, two
+   easing curves — so the panel stays on a rhythm instead of accumulating one-off pixel values.
+
+   Density is a product requirement, not an aesthetic: the user runs ten agents and wants them
+   all visible beside a video call. So the panel spends its pixels on rows, and every piece of
+   chrome has to justify its height.
+
+   Theming: the palette is defined **here** and only here, four times over — light on `:root`
+   and on `[data-theme='light']`, dark under `prefers-color-scheme` and on `[data-theme='dark']`.
+   Writing it twice per theme in one file is deliberate: the alternative was the preview harness
+   keeping its own copy behind a "keep in sync" comment, which promptly went out of sync and
+   rendered the light frame in near-invisible grey the first time a token was added. Anything
+   that wants a fixed theme sets `data-theme` and inherits the real thing.
+   ========================================================================================== */
+
 :root {
+  /* -- Material ------------------------------------------------------------------------- */
   /* Translucent so the native window material shows through (Liquid Glass, ADR-0008). */
   --panel-bg: rgb(246 246 248 / 62%);
+  /* Laid over the material: light pools at the top of a pane of glass, not evenly across it. */
+  --panel-gloss: linear-gradient(180deg, rgb(255 255 255 / 22%) 0%, rgb(255 255 255 / 0%) 42%);
   --panel-fg: #16161a;
   --panel-muted: #5c5c68;
+  --panel-faint: rgb(0 0 0 / 45%);
   --panel-border: rgb(0 0 0 / 8%);
   --panel-hover: rgb(0 0 0 / 5%);
+  --panel-press: rgb(0 0 0 / 9%);
   /* The specular edge: a bright hairline on top, fading down the sides. */
   --panel-sheen: rgb(255 255 255 / 65%);
   --panel-shadow: 0 12px 34px rgb(0 0 0 / 18%), 0 1px 3px rgb(0 0 0 / 10%);
-  --panel-radius: 18px;
+  /* Opaque, for text sitting *on* a filled shape. Never use --panel-bg for this: it is
+     translucent by design, and a translucent glyph on a solid circle is unreadable. */
+  --panel-ink-on-muted: #f8f8fa;
+
+  /* -- State ---------------------------------------------------------------------------- */
   --state-needs-input: #d97706;
   --state-needs-input-wash: rgb(217 119 6 / 12%);
+  --state-needs-input-edge: rgb(217 119 6 / 26%);
   --state-working: #0a84ff;
+  --state-working-wash: rgb(10 132 255 / 12%);
+  /* Explicit shades rather than color-mix(): no minimum macOS version is pinned, and on a
+     WebKit that cannot resolve the function the primary button would lose its fill and leave
+     white text on nothing. */
+  --state-working-lift: #3d9dff;
+  --state-working-deep: #0067d6;
   --state-done-idle: #8e8e93;
   --state-ok: #248a3d;
+  --state-ok-wash: rgb(36 138 61 / 12%);
+  --focus-ring: 0 0 0 2px rgb(10 132 255 / 55%);
+
+  /* -- Geometry ------------------------------------------------------------------------- */
+  --panel-radius: 18px;
+  --radius-md: 9px;
+  --radius-sm: 6px;
+  --gutter: 10px;
+  --row-height: 34px;
+
+  /* -- Motion --------------------------------------------------------------------------- */
+  /* Decelerating: things settle rather than stop dead. Apple's own UI curve, near enough. */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.3, 0.64, 1);
 }
 
+/* The system's choice, unless something below the root has pinned a theme. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --panel-bg: rgb(28 28 33 / 58%);
+    --panel-gloss: linear-gradient(180deg, rgb(255 255 255 / 8%) 0%, rgb(255 255 255 / 0%) 46%);
     --panel-fg: #f4f4f7;
     --panel-muted: #a6a6b2;
+    --panel-faint: rgb(255 255 255 / 42%);
     --panel-border: rgb(255 255 255 / 10%);
     --panel-hover: rgb(255 255 255 / 9%);
+    --panel-press: rgb(255 255 255 / 14%);
     --panel-sheen: rgb(255 255 255 / 22%);
     --panel-shadow: 0 14px 40px rgb(0 0 0 / 45%), 0 1px 3px rgb(0 0 0 / 30%);
     --state-needs-input: #ff9f0a;
     --state-needs-input-wash: rgb(255 159 10 / 16%);
+    --state-needs-input-edge: rgb(255 159 10 / 32%);
     --state-working: #409cff;
+    --state-working-wash: rgb(64 156 255 / 16%);
+    --state-working-lift: #6ab2ff;
+    --state-working-deep: #1f7ee0;
     --state-done-idle: #8e8e93;
     --state-ok: #30d158;
+    --state-ok-wash: rgb(48 209 88 / 16%);
+    --focus-ring: 0 0 0 2px rgb(64 156 255 / 65%);
   }
+}
+
+/* Explicit overrides, for the side-by-side preview and for anything that needs one theme. */
+[data-theme='light'] {
+  /* -- Material ------------------------------------------------------------------------- */
+  /* Translucent so the native window material shows through (Liquid Glass, ADR-0008). */
+  --panel-bg: rgb(246 246 248 / 62%);
+  /* Laid over the material: light pools at the top of a pane of glass, not evenly across it. */
+  --panel-gloss: linear-gradient(180deg, rgb(255 255 255 / 22%) 0%, rgb(255 255 255 / 0%) 42%);
+  --panel-fg: #16161a;
+  --panel-muted: #5c5c68;
+  --panel-faint: rgb(0 0 0 / 45%);
+  --panel-border: rgb(0 0 0 / 8%);
+  --panel-hover: rgb(0 0 0 / 5%);
+  --panel-press: rgb(0 0 0 / 9%);
+  /* The specular edge: a bright hairline on top, fading down the sides. */
+  --panel-sheen: rgb(255 255 255 / 65%);
+  --panel-shadow: 0 12px 34px rgb(0 0 0 / 18%), 0 1px 3px rgb(0 0 0 / 10%);
+
+  /* -- State ---------------------------------------------------------------------------- */
+  --state-needs-input: #d97706;
+  --state-needs-input-wash: rgb(217 119 6 / 12%);
+  --state-needs-input-edge: rgb(217 119 6 / 26%);
+  --state-working: #0a84ff;
+  --state-working-wash: rgb(10 132 255 / 12%);
+  /* Explicit shades rather than color-mix(): no minimum macOS version is pinned, and on a
+     WebKit that cannot resolve the function the primary button would lose its fill and leave
+     white text on nothing. */
+  --state-working-lift: #3d9dff;
+  --state-working-deep: #0067d6;
+  --state-done-idle: #8e8e93;
+  --state-ok: #248a3d;
+  --state-ok-wash: rgb(36 138 61 / 12%);
+  --focus-ring: 0 0 0 2px rgb(10 132 255 / 55%);
+}
+
+[data-theme='dark'] {
+  --panel-bg: rgb(28 28 33 / 58%);
+  --panel-gloss: linear-gradient(180deg, rgb(255 255 255 / 8%) 0%, rgb(255 255 255 / 0%) 46%);
+  --panel-fg: #f4f4f7;
+  --panel-muted: #a6a6b2;
+  --panel-faint: rgb(255 255 255 / 42%);
+  --panel-border: rgb(255 255 255 / 10%);
+  --panel-hover: rgb(255 255 255 / 9%);
+  --panel-press: rgb(255 255 255 / 14%);
+  --panel-sheen: rgb(255 255 255 / 22%);
+  --panel-shadow: 0 14px 40px rgb(0 0 0 / 45%), 0 1px 3px rgb(0 0 0 / 30%);
+  --panel-ink-on-muted: #191920;
+  --state-needs-input: #ff9f0a;
+  --state-needs-input-wash: rgb(255 159 10 / 16%);
+  --state-needs-input-edge: rgb(255 159 10 / 32%);
+  --state-working: #409cff;
+  --state-working-wash: rgb(64 156 255 / 16%);
+  --state-working-lift: #6ab2ff;
+  --state-working-deep: #1f7ee0;
+  --state-done-idle: #8e8e93;
+  --state-ok: #30d158;
+  --state-ok-wash: rgb(48 209 88 / 16%);
+  --focus-ring: 0 0 0 2px rgb(64 156 255 / 65%);
 }
 
 * {
@@ -47,9 +169,14 @@ body,
 body {
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-optical-sizing: auto;
   color: var(--panel-fg);
   background: transparent;
+  /* Small type on a translucent ground needs the smoothing to stay crisp. */
+  -webkit-font-smoothing: antialiased;
 }
+
+/* ---- The panel shell -------------------------------------------------------------------- */
 
 .panel {
   position: relative;
@@ -69,11 +196,22 @@ body {
   -webkit-user-select: none;
 }
 
-/* Glass has an edge: a hairline that catches the light at the top and fades away by the
-   bottom, over a faint inner rim. Non-interactive, and above the content it sits on. */
+/* Two non-interactive overlays make the glass read as glass. The gloss is *under* the content
+   (it is part of the material); the edge is *over* it, because a rim is the nearest thing to
+   the viewer. Neither may ever swallow a click on a row. */
+.panel::before {
+  position: absolute;
+  z-index: 0;
+  border-radius: inherit;
+  background: var(--panel-gloss);
+  content: '';
+  pointer-events: none;
+  inset: 0;
+}
+
 .panel::after {
   position: absolute;
-  z-index: 1;
+  z-index: 2;
   border-radius: inherit;
   box-shadow:
     inset 0 0 0 0.5px var(--panel-border),
@@ -81,6 +219,12 @@ body {
   content: '';
   pointer-events: none;
   inset: 0;
+}
+
+/* Content rides above the gloss and below the rim. */
+.panel > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* ---- Header: the guaranteed drag handle, and the only chrome on the panel ---------------- */
@@ -92,17 +236,25 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 0 5px 0 9px;
-  border-bottom: 1px solid var(--panel-border);
   /* Reads as a handle without spending a row on a title bar. */
   cursor: grab;
+}
+
+.panel__header:active {
+  cursor: grabbing;
 }
 
 .panel__grip {
   width: 30px;
   height: 4px;
   border-radius: 2px;
+  transition: opacity 160ms var(--ease-out);
   background: currentcolor;
-  opacity: 0.22;
+  opacity: 0.18;
+}
+
+.panel__header:hover .panel__grip {
+  opacity: 0.32;
 }
 
 .panel__hide {
@@ -114,10 +266,13 @@ body {
   justify-content: center;
   padding: 0;
   border: 0;
-  border-radius: 5px;
-  font-size: 13px;
+  border-radius: var(--radius-sm);
+  transition:
+    color 140ms var(--ease-out),
+    background-color 140ms var(--ease-out);
+  font-size: 11px;
   line-height: 1;
-  color: var(--panel-muted);
+  color: var(--panel-faint);
   background: transparent;
   cursor: pointer;
 }
@@ -125,6 +280,10 @@ body {
 .panel__hide:hover {
   color: var(--panel-fg);
   background: var(--panel-hover);
+}
+
+.panel__hide:active {
+  background: var(--panel-press);
 }
 
 /* ---- Sections: running on top, waiting on the user below -------------------------------- */
@@ -135,6 +294,7 @@ body {
   min-height: 0;
   flex: 1;
   flex-direction: column;
+  padding-top: 2px;
 }
 
 /* Each section takes the height its rows need, up to its share of the panel, and scrolls
@@ -147,7 +307,9 @@ body {
   flex-direction: column;
 }
 
+/* Sections are separated by space and a hairline, in that order of importance. */
 .group + .group {
+  margin-top: 3px;
   border-top: 1px solid var(--panel-border);
   box-shadow: inset 0 0.5px 0 var(--panel-sheen);
 }
@@ -158,22 +320,37 @@ body {
   gap: 6px;
   align-items: center;
   margin: 0;
-  padding: 6px 10px 3px;
+  padding: 7px var(--gutter) 4px;
   font-size: 9.5px;
-  font-weight: 600;
+  font-weight: 640;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--panel-muted);
+  letter-spacing: 0.075em;
+  color: var(--panel-faint);
 }
 
 .group__heading--attention {
   color: var(--state-needs-input);
 }
 
+/* The count belongs next to what it counts (ADR-0008), as a pill so it reads as a quantity
+   rather than as another word in the heading. */
 .group__count {
+  display: inline-flex;
+  min-width: 15px;
+  padding: 0 4px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 9px;
   font-variant-numeric: tabular-nums;
-  font-weight: 400;
-  opacity: 0.8;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: inherit;
+  background: var(--panel-hover);
+}
+
+.group__heading--attention .group__count {
+  background: var(--state-needs-input-wash);
 }
 
 .group__list {
@@ -181,40 +358,41 @@ body {
   overflow-y: auto;
   min-height: 0;
   margin: 0;
-  padding: 0 0 3px;
+  padding: 0 0 4px;
   list-style: none;
 }
 
-.group__list::-webkit-scrollbar {
-  width: 6px;
-}
+/* Deliberately unstyled: styling ::-webkit-scrollbar opts into a *classic* scrollbar, which
+   takes 7px of row width the moment an eleventh session arrives and shifts every title under
+   the cursor. macOS's own overlay scrollbar floats over the content, costs nothing, and fades
+   when it is not in use — which is both the modern behaviour and the one that leaves the rows
+   where they were. */
 
-.group__list::-webkit-scrollbar-thumb {
-  border-radius: 3px;
-  background: var(--panel-border);
-}
+/* ---- Empty state ------------------------------------------------------------------------ */
 
 .panel__empty {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
   align-items: center;
   justify-content: center;
-  padding: 0 16px;
+  padding: 0 18px;
   text-align: center;
 }
 
 .panel__empty-title {
   margin: 0;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
+  letter-spacing: -0.005em;
 }
 
 .panel__empty-hint {
   margin: 0;
+  max-width: 34ch;
   font-size: 11px;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--panel-muted);
 }
 
@@ -226,8 +404,8 @@ body {
 /* A broken pipeline is the one thing in the panel the user is meant to copy verbatim. */
 .panel__empty-error {
   margin: 0;
-  padding: 4px 6px;
-  border-radius: 5px;
+  padding: 5px 7px;
+  border-radius: var(--radius-sm);
   font-size: 10px;
   line-height: 1.4;
   overflow-wrap: anywhere;
@@ -242,6 +420,7 @@ body {
   font: inherit;
   font-size: 10.5px;
   text-decoration: underline;
+  text-underline-offset: 2px;
   color: var(--panel-muted);
   background: transparent;
   cursor: pointer;
@@ -251,21 +430,24 @@ body {
   color: var(--panel-fg);
 }
 
-/* ---- Row: [dot] title / detail ............ age ----------------------------------------- */
+/* ---- Row: [emoji] title / detail ............ age ---------------------------------------- */
 
 .row {
+  position: relative;
   display: grid;
-  width: 100%;
-  height: 34px;
+  width: calc(100% - 8px);
+  height: var(--row-height);
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   grid-template-columns: 16px minmax(0, 1fr) auto;
   margin: 0 4px;
-  padding: 0 6px 0 5px;
+  padding: 0 8px;
   border: 0;
-  border-left: 2px solid transparent;
-  border-radius: 8px;
-  transition: background-color 120ms ease;
+  border-radius: var(--radius-md);
+  transition:
+    background-color 140ms var(--ease-out),
+    box-shadow 140ms var(--ease-out),
+    transform 160ms var(--ease-spring);
   font: inherit;
   text-align: left;
   color: inherit;
@@ -277,9 +459,16 @@ body {
   background: var(--panel-hover);
 }
 
+/* A press that stays a press gets a little give; one that turns into a drag never gets here,
+   because the panel cancels the click (ADR-0008). */
+.row:active {
+  transform: scale(0.985);
+  background: var(--panel-press);
+}
+
 .row:focus-visible {
-  outline: 2px solid var(--state-working);
-  outline-offset: -1px;
+  outline: 0;
+  box-shadow: var(--focus-ring);
 }
 
 .row__emoji {
@@ -293,6 +482,7 @@ body {
   display: flex;
   min-width: 0;
   flex-direction: column;
+  gap: 1px;
 }
 
 .row__title {
@@ -300,6 +490,7 @@ body {
   font-size: 12.5px;
   font-weight: 550;
   line-height: 15px;
+  letter-spacing: -0.006em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -307,7 +498,7 @@ body {
 .row__detail {
   overflow: hidden;
   font-size: 10.5px;
-  line-height: 13px;
+  line-height: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--panel-muted);
@@ -320,7 +511,7 @@ body {
   align-items: baseline;
   font-size: 10.5px;
   font-variant-numeric: tabular-nums;
-  color: var(--panel-muted);
+  color: var(--panel-faint);
 }
 
 .row__age-icon {
@@ -340,32 +531,56 @@ body {
   font-size: 7px;
 }
 
-/* ---- Per-state emphasis ----------------------------------------------------------------- */
+/* ---- Per-state emphasis: two strengths, one loud row --------------------------------------
 
-/* The one loud thing on the panel: a needs-input row must be impossible to miss from a
-   desk away, so it gets the accent bar, the wash and the only animation in the UI. */
-.row--attention {
-  border-left-color: var(--state-needs-input);
-  background: var(--state-needs-input-wash);
-  box-shadow: inset 0 0 0 0.5px rgb(255 159 10 / 22%);
+   Every blocked session is *marked* — an accent pill and an amber reason, enough to tell
+   "stopped and stuck" from "stopped and finished" while scanning. Exactly one is *loud*: the
+   wash, the heavier title and the only animation in the UI. Four rows all shouting was four
+   rows saying nothing, which is the whole of ADR-0013. ------------------------------------- */
+
+/* A rounded pill rather than a full-height border: it belongs to the row's own shape. */
+.row--blocked::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 2.5px;
+  height: 16px;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: var(--state-needs-input);
+  content: '';
 }
 
-.row--attention:hover {
-  background: var(--state-needs-input-wash);
-  box-shadow: inset 0 0 0 999px var(--panel-hover);
+.row--blocked .row__detail {
+  color: var(--state-needs-input);
 }
 
-.row--attention .row__emoji {
-  animation: row-pulse 2s ease-out infinite;
+.row--loud {
+  background: var(--state-needs-input-wash);
+  box-shadow: inset 0 0 0 0.5px var(--state-needs-input-edge);
+}
+
+.row--loud:hover {
+  background: var(--state-needs-input-wash);
+  box-shadow:
+    inset 0 0 0 0.5px var(--state-needs-input-edge),
+    inset 0 0 0 999px var(--panel-hover);
+}
+
+.row--loud::before {
+  height: 20px;
+}
+
+.row--loud .row__emoji {
+  animation: row-pulse 2.4s var(--ease-out) infinite;
   border-radius: 50%;
 }
 
-.row--attention .row__title {
+.row--loud .row__title {
   font-weight: 650;
 }
 
-.row--attention .row__detail,
-.row--attention .row__age {
+.row--loud .row__age {
   color: var(--state-needs-input);
 }
 
@@ -383,9 +598,83 @@ body {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .row--attention .row__emoji {
-    animation: none;
+/* ---- A click in flight ------------------------------------------------------------------
+
+   Raising a window is normally instant, but a cold System Events or a slow editor can take a
+   second or two, and up to now that was a row that looked like it had ignored the click. The
+   spinner sits in the age column so nothing reflows while it spins. ---------------------- */
+
+.row--pending {
+  background: var(--panel-hover);
+}
+
+.row__spinner {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  animation: row-spin 700ms linear infinite;
+  border: 1.5px solid var(--panel-border);
+  border-top-color: var(--state-working);
+  border-radius: 50%;
+}
+
+@keyframes row-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* ---- Notice: what happened when you clicked --------------------------------------------- */
+
+.panel__notice {
+  display: flex;
+  flex: none;
+  gap: 7px;
+  align-items: flex-start;
+  padding: 6px var(--gutter);
+  border-top: 1px solid var(--panel-border);
+  animation: notice-in 220ms var(--ease-out);
+  box-shadow: inset 0 0.5px 0 var(--panel-sheen);
+  font-size: 10.5px;
+  line-height: 13px;
+  color: var(--panel-fg);
+  /* Neutral, not amber. Amber means "a session needs you" everywhere else in this panel, and a
+     report on a click the user just made is not that — borrowing the colour would blunt the one
+     signal the panel exists to carry (ADR-0008, ADR-0013). */
+  background: var(--panel-hover);
+}
+
+.panel__notice-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel__notice-dismiss {
+  display: flex;
+  width: 13px;
+  height: 13px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 8px;
+  color: var(--panel-faint);
+  background: transparent;
+  cursor: pointer;
+}
+
+.panel__notice-dismiss:hover {
+  color: var(--panel-fg);
+  background: var(--panel-hover);
+}
+
+@keyframes notice-in {
+  from {
+    transform: translateY(4px);
+    opacity: 0;
   }
 }
 
@@ -395,19 +684,19 @@ body {
   display: flex;
   flex: none;
   flex-direction: column;
-  gap: 1px;
-  padding: 5px 10px 7px;
+  gap: 2px;
+  padding: 5px var(--gutter) 7px;
   border-top: 1px solid var(--panel-border);
   box-shadow: inset 0 0.5px 0 var(--panel-sheen);
   font-size: 9.5px;
   line-height: 12px;
-  color: var(--panel-muted);
+  color: var(--panel-faint);
 }
 
 .panel__legend-line {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 9px;
 }
 
 .panel__legend-item {
@@ -433,20 +722,13 @@ body {
   overflow-y: auto;
   min-height: 0;
   flex: 1;
-  padding: 6px 10px 8px;
-}
-
-.setup__intro {
-  margin: 0 0 9px;
-  font-size: 10.5px;
-  line-height: 1.45;
-  color: var(--panel-muted);
+  padding: 8px var(--gutter) 10px;
 }
 
 .setup__steps {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -455,26 +737,26 @@ body {
 .setup__step {
   display: flex;
   flex-direction: column;
-  gap: 3px;
 }
 
 .setup__step-head {
   display: flex;
-  gap: 6px;
+  gap: 7px;
   align-items: center;
 }
 
 .setup__step-index {
   display: flex;
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   flex: none;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   font-size: 9px;
-  font-weight: 600;
-  color: var(--panel-bg);
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  color: var(--panel-ink-on-muted);
   background: var(--panel-muted);
 }
 
@@ -483,26 +765,31 @@ body {
   flex: 1;
   font-size: 11.5px;
   font-weight: 600;
+  letter-spacing: -0.004em;
 }
 
 .setup__chip {
   flex: none;
-  padding: 1px 5px;
-  border-radius: 4px;
+  padding: 1.5px 6px;
+  border-radius: 999px;
   font-size: 8.5px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--panel-muted);
+  color: var(--panel-faint);
   background: var(--panel-hover);
 }
 
+/* Each status carries its own tint, so the chips are readable as a set at a glance rather
+   than as three identical grey pills with different words in them. */
 .setup__chip--done {
   color: var(--state-ok);
+  background: var(--state-ok-wash);
 }
 
 .setup__chip--todo {
   color: var(--state-working);
+  background: var(--state-working-wash);
 }
 
 .setup__chip--blocked {
@@ -513,43 +800,63 @@ body {
 .setup__step-body {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding-left: 20px;
+  gap: 4px;
+  padding-top: 5px;
+  padding-left: 22px;
 }
 
 .setup__text {
   margin: 0;
   font-size: 10.5px;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .setup__muted {
   margin: 0;
   font-size: 10px;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--panel-muted);
 }
 
+/* No chip background: these are file paths, they wrap, and a wrapping background reads as torn
+   highlighter rather than as one token. Monospace and a slight tint carry it. */
 .setup__step-body code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 9.5px;
   overflow-wrap: anywhere;
+  color: var(--panel-muted);
+}
+
+/* One line of status under the checklist, not a fourth step: the user does nothing in this app
+   to satisfy it, so it is a fact rather than an instruction (ADR-0013). */
+.setup__status {
+  margin: 13px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--panel-border);
+  font-size: 10px;
+  line-height: 1.45;
+  color: var(--panel-faint);
 }
 
 .setup__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 3px;
+  margin-top: 4px;
 }
 
 .setup__button {
   flex: none;
-  padding: 3px 9px;
+  padding: 4px 10px;
   border: 1px solid var(--panel-border);
-  border-radius: 5px;
+  border-radius: 7px;
+  transition:
+    background-color 140ms var(--ease-out),
+    transform 160ms var(--ease-spring),
+    box-shadow 140ms var(--ease-out);
   font: inherit;
   font-size: 10.5px;
+  font-weight: 500;
   color: inherit;
   background: transparent;
   cursor: pointer;
@@ -559,6 +866,16 @@ body {
   background: var(--panel-hover);
 }
 
+.setup__button:active:not(:disabled) {
+  transform: scale(0.97);
+  background: var(--panel-press);
+}
+
+.setup__button:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
 .setup__button:disabled {
   cursor: default;
   opacity: 0.5;
@@ -566,20 +883,29 @@ body {
 
 .setup__button--primary {
   border-color: transparent;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 14%);
   font-weight: 600;
   color: #fff;
-  background: var(--state-working);
+  background: linear-gradient(180deg, var(--state-working-lift) 0%, var(--state-working) 100%);
+}
+
+.setup__button--primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--state-working) 0%, var(--state-working-deep) 100%);
+}
+
+.setup__button--primary:active:not(:disabled) {
+  background: var(--state-working-deep);
 }
 
 .setup__preview {
   overflow: auto;
   max-height: 130px;
-  margin: 4px 0 0;
-  padding: 6px;
-  border-radius: 5px;
+  margin: 5px 0 0;
+  padding: 7px;
+  border-radius: var(--radius-sm);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 9px;
-  line-height: 1.35;
+  line-height: 1.4;
   background: var(--panel-hover);
   /* The one place in the panel where reading the exact text matters more than not selecting it. */
   user-select: text;
@@ -587,11 +913,11 @@ body {
 }
 
 .setup__outcome {
-  margin: 4px 0 0;
-  padding: 4px 6px;
-  border-radius: 5px;
+  margin: 5px 0 0;
+  padding: 5px 7px;
+  border-radius: var(--radius-sm);
   font-size: 10px;
-  line-height: 1.4;
+  line-height: 1.45;
   background: var(--panel-hover);
 }
 
@@ -601,8 +927,9 @@ body {
   gap: 6px;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 10px;
+  padding: 7px var(--gutter);
   border-top: 1px solid var(--panel-border);
+  box-shadow: inset 0 0.5px 0 var(--panel-sheen);
 }
 
 /* Build identity: the line a bug report needs, kept out of the panel proper. */
@@ -611,9 +938,60 @@ body {
   overflow: hidden;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 9px;
-  color: var(--panel-muted);
+  color: var(--panel-faint);
   white-space: nowrap;
   text-overflow: ellipsis;
   user-select: text;
   -webkit-user-select: text;
+}
+
+/* ---- Accessibility preferences ---------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .row--loud .row__emoji,
+  .row__spinner,
+  .panel__notice {
+    animation: none;
+  }
+
+  .row,
+  .setup__button {
+    transition: none;
+  }
+
+  .row:active,
+  .setup__button:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* Translucency and hairlines are the first things to go when the user has asked for contrast:
+   the material is decoration, the text is the product. */
+@media (prefers-contrast: more) {
+  :root {
+    --panel-bg: rgb(248 248 250 / 96%);
+    --panel-muted: #3a3a44;
+    --panel-faint: rgb(0 0 0 / 68%);
+    --panel-border: rgb(0 0 0 / 30%);
+    --panel-gloss: none;
+  }
+
+  .row--blocked .row__detail,
+  .group__heading--attention {
+    color: #8a4b04;
+  }
+}
+
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root {
+    --panel-bg: rgb(20 20 24 / 96%);
+    --panel-muted: #d8d8e0;
+    --panel-faint: rgb(255 255 255 / 74%);
+    --panel-border: rgb(255 255 255 / 32%);
+  }
+
+  .row--blocked .row__detail,
+  .group__heading--attention {
+    color: var(--state-needs-input);
+  }
 }

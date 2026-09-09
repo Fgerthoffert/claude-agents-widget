@@ -1,18 +1,22 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 
 import { describeAge } from '../core/describeAge';
+import { describeFocusOutcome } from '../core/describeFocusOutcome';
 import { describeSession } from '../core/describeSession';
 import { groupSessions } from '../core/groupSessions';
+import { loudSessionId } from '../core/loudSessionId';
 import { openSystemSettings } from '../detection/openSystemSettings';
 import { EmptyState } from './EmptyState';
 import { PanelHeader } from './PanelHeader';
 import { PanelLegend } from './PanelLegend';
+import { PanelNotice } from './PanelNotice';
 import { SessionGroup } from './SessionGroup';
 import { SetupView } from './SetupView';
 import { copyDiagnostics } from './copyDiagnostics';
 import { onSessionClick } from './onSessionClick';
 import { showPanel } from './showPanel';
 import { togglePanelVisibility } from './togglePanelVisibility';
+import { useAcknowledged } from './useAcknowledged';
 import { useAppVersion } from './useAppVersion';
 import { useHomeDir } from './useHomeDir';
 import { useLogPath } from './useLogPath';
@@ -36,6 +40,12 @@ import './panel.css';
  * from the store (`needs_input` before `done_idle`, then most recent first) and is deliberately
  * not touched here — emphasis is styling only, so a row never moves under the user's cursor.
  *
+ * Exactly one row is ever loud, and clicking it makes it calm: this component owns the
+ * acknowledgement map and hands `loudSessionId` the decision (ADR-0013). It also owns what
+ * happens *after* a click — the row shows it is working, a repeat press is ignored while the
+ * first is in flight, and anything short of "the exact window came forward" is said out loud in
+ * a notice rather than left for the user to guess at.
+ *
  * The panel is also where setup lives. It opens on the setup view by itself when the hooks are
  * not installed, because until they are there is nothing else for it to show; the tray's
  * "Setup / Diagnostics" reopens it at any time (ADR-0009).
@@ -54,7 +64,13 @@ export const Panel = () => {
   const [lastFocus, setLastFocus] = useState<LastFocusOutcome | null>(null);
   const [showSetup, setShowSetup] = useState(false);
   const [setupDismissed, setSetupDismissed] = useState(false);
+  const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const { seen, acknowledge } = useAcknowledged();
   const setup = useSetupState(sessions, lastFocus);
+  // Read at click time, never captured: a second press while the first is still running would
+  // otherwise queue another AppleScript behind it and land the user somewhere twice.
+  const inFlight = useRef(false);
 
   usePersistedPanelFrame();
   const { onMouseDown, consumeDrag } = useWindowDragOnMove();
@@ -64,7 +80,16 @@ export const Panel = () => {
     void showPanel();
   }, []);
 
-  useTray(sessions, { onOpenSetup: openSetup, onFocusResult: setLastFocus });
+  const reportFocus = useCallback((outcome: LastFocusOutcome) => {
+    setLastFocus(outcome);
+    setNotice(describeFocusOutcome(outcome));
+  }, []);
+
+  useTray(sessions, {
+    onOpenSetup: openSetup,
+    onFocusResult: reportFocus,
+    onAcknowledge: acknowledge,
+  });
 
   const groups = useMemo(() => groupSessions(sessions), [sessions]);
   const toRows = useCallback(
@@ -80,11 +105,22 @@ export const Panel = () => {
   const handleSelect = useCallback(
     (session: Session) => {
       // The click that ends a drag is not a click on the row it happened over.
-      if (consumeDrag()) return;
+      if (consumeDrag() || inFlight.current) return;
 
-      void onSessionClick(session).then(setLastFocus);
+      // Going to look at a session is the user saying they know about it, whether or not the
+      // window turns out to be reachable — so the row calms down immediately, not on success.
+      acknowledge(session);
+      inFlight.current = true;
+      setPendingSessionId(session.sessionId);
+      setNotice(null);
+
+      void onSessionClick(session).then((outcome) => {
+        inFlight.current = false;
+        setPendingSessionId(null);
+        reportFocus(outcome);
+      });
     },
-    [consumeDrag],
+    [consumeDrag, acknowledge, reportFocus],
   );
 
   const handleHide = useCallback(() => {
@@ -108,6 +144,12 @@ export const Panel = () => {
   const handleOpenPane = useCallback((pane: 'automation' | 'accessibility') => {
     void openSystemSettings(pane);
   }, []);
+
+  const handleDismissNotice = useCallback(() => {
+    setNotice(null);
+  }, []);
+
+  const loud = useMemo(() => loudSessionId(sessions, seen), [sessions, seen]);
 
   const empty = groups.running.length === 0 && groups.waiting.length === 0;
   // Auto-open only once the probe has really run, so the placeholder state never flashes it up.
@@ -150,6 +192,8 @@ export const Panel = () => {
                   label="Running"
                   rows={toRows(groups.running)}
                   attention={false}
+                  loudSessionId={loud}
+                  pendingSessionId={pendingSessionId}
                   onSelect={handleSelect}
                 />
               )}
@@ -158,11 +202,14 @@ export const Panel = () => {
                   label="Waiting for you"
                   rows={toRows(groups.waiting)}
                   attention={groups.waiting.some((session) => session.state === 'needs_input')}
+                  loudSessionId={loud}
+                  pendingSessionId={pendingSessionId}
                   onSelect={handleSelect}
                 />
               )}
             </div>
           )}
+          <PanelNotice message={notice} onDismiss={handleDismissNotice} />
           <PanelLegend />
         </>
       )}

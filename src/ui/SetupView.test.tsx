@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -46,14 +46,27 @@ const renderView = (setup = state(), extra: Partial<Parameters<typeof SetupView>
 };
 
 describe('SetupView', () => {
-  it('names the file it will change and promises the backup before offering the button', () => {
+  it('names the file it will change before offering the button', () => {
     renderView();
 
     const step = screen.getByText(/Adds 1 entry to/).textContent;
     expect(step).toContain('/Users/test/.claude/settings.json');
-    expect(step).toContain('existing hooks are kept');
-    expect(step).toContain('backup');
     expect(screen.getByRole('button', { name: 'Install hooks' })).toBeEnabled();
+  });
+
+  it('keeps the reassurance behind Show the change, where a suspicious user looks', async () => {
+    const user = userEvent.setup();
+    renderView();
+
+    // Not in the way of the two buttons the step is actually about (ADR-0013)...
+    expect(screen.queryByText(/existing hooks are kept/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Show the change' }));
+
+    // ...but one press away, together with the exact diff and the event list.
+    const detail = screen.getByText(/existing hooks are kept/).textContent;
+    expect(detail).toContain('backup');
+    expect(detail).toContain('SessionStart');
   });
 
   it('calls the installer exactly once per press', async () => {
@@ -108,8 +121,11 @@ describe('SetupView', () => {
       }),
     );
 
+    // A finished step is a receipt, not an instruction: heading and chip, and nothing else.
     expect(screen.queryByRole('button', { name: 'Install hooks' })).not.toBeInTheDocument();
-    expect(screen.getByText(/All five events call/)).toBeInTheDocument();
+    expect(screen.getByText('Install the Claude Code hooks')).toBeInTheDocument();
+    expect(screen.getByText('done')).toBeInTheDocument();
+    expect(document.querySelectorAll('.setup__step-body')).toHaveLength(1);
   });
 
   it('deep-links to each macOS permission pane', async () => {
@@ -122,8 +138,26 @@ describe('SetupView', () => {
     expect(spies.onOpenPane.mock.calls).toEqual([['automation'], ['accessibility']]);
   });
 
-  it('warns that a permission grant is tied to this app bundle', () => {
+  it('warns that a grant is tied to this app bundle only once a click has been refused', () => {
+    // The upgrade trap is worth explaining exactly when it is biting, and not before.
     renderView();
+    expect(screen.queryByText(/replacing the app/)).not.toBeInTheDocument();
+
+    cleanup();
+    renderView(
+      state({
+        permissions: {
+          status: 'blocked',
+          lastFocus: {
+            ok: false,
+            method: null,
+            permissionDenied: true,
+            degraded: false,
+            detail: 'permission-denied',
+          },
+        },
+      }),
+    );
 
     expect(screen.getByText(/replacing the app/)).toBeInTheDocument();
   });
@@ -137,6 +171,7 @@ describe('SetupView', () => {
             ok: false,
             method: null,
             permissionDenied: true,
+            degraded: false,
             detail: 'permission-denied',
           },
         },

@@ -24,16 +24,24 @@ export const onSessionClick = async (session: Session): Promise<LastFocusOutcome
           ok: true,
           method: result.method,
           permissionDenied: result.degradedFrom === 'permission-denied',
+          degraded: result.degradedFrom !== null,
           detail: result.method,
         }
       : {
           ok: false,
           method: null,
           permissionDenied: result.reason === 'permission-denied',
+          degraded: false,
           detail: result.reason,
         };
   } catch (error: unknown) {
     console.error('focusSession threw for', session.sessionId, error);
-    return { ok: false, method: null, permissionDenied: false, detail: 'focus_engine_error' };
+    return {
+      ok: false,
+      method: null,
+      permissionDenied: false,
+      degraded: false,
+      detail: 'focus_engine_error',
+    };
   }
 };

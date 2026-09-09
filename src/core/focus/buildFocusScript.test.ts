@@ -42,10 +42,15 @@ const ghostty: FocusTarget = {
 const all = [vscode, cursor, insiders, iterm2, terminal, ghostty];
 
 describe('buildFocusScript', () => {
-  it.each(all)('dispatches $host.kind to an adapter that tells its own app', (target) => {
-    expect(buildFocusScript(target)?.source).toContain(
-      `tell application "${target.host.appName ?? ''}"`,
-    );
+  // Terminals are scriptable by name; the editors have no window API and go through System
+  // Events instead, so "targets its own app" is one or the other, never neither.
+  it.each(all)('dispatches $host.kind to an adapter that targets its own app', (target) => {
+    const source = buildFocusScript(target)?.source ?? '';
+    const targeted =
+      source.includes(`tell application "${target.host.appName ?? ''}"`) ||
+      source.includes(`process "${target.host.processName ?? ''}"`);
+
+    expect(targeted).toBe(true);
   });
 
   it.each(all)('stamps $host.kind with the marker the shell capability requires', (target) => {

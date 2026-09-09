@@ -100,34 +100,23 @@ body {
   height: 560px;
 }
 
-/* Mirrors the dark tokens in panel.css so both themes can be compared side by side without
-   changing the system appearance. Keep in sync if the palette changes. */
-.preview__frame--dark {
-  --panel-bg: #1c1c20;
-  --panel-fg: #f2f2f4;
-  --panel-muted: #9a9aa6;
-  --panel-border: #35353d;
-  --panel-hover: rgb(255 255 255 / 8%);
-  --state-needs-input: #ff9f0a;
-  --state-needs-input-wash: rgb(255 159 10 / 16%);
-  --state-working: #409cff;
-  --state-done-idle: #8e8e93;
-
+/* No palette here. panel.css owns both themes and exposes them through `data-theme`, which the
+   frames set — a copy behind a "keep in sync" comment is what made the light frame unreadable
+   the first time a token was added. */
+.preview__frame {
   color: var(--panel-fg);
 }
 
-.preview__frame--light {
+/* Opting out of translucency lets the two themes be compared without the desktop behind them
+   tinting both. It is not the default, because it is not what ships: an opaque --panel-bg once
+   hid a step number rendered *in* --panel-bg, which is invisible on real glass. The Glass
+   toggle switches this off so the shipping material can be looked at. */
+.preview__frame--opaque[data-theme='light'] {
   --panel-bg: #f7f7f8;
-  --panel-fg: #1b1b1f;
-  --panel-muted: #6b6b76;
-  --panel-border: #d3d3da;
-  --panel-hover: rgb(0 0 0 / 6%);
-  --state-needs-input: #d97706;
-  --state-needs-input-wash: rgb(217 119 6 / 12%);
-  --state-working: #0a84ff;
-  --state-done-idle: #8e8e93;
+}
 
-  color: var(--panel-fg);
+.preview__frame--opaque[data-theme='dark'] {
+  --panel-bg: #1c1c20;
 }
 
 .preview__log {

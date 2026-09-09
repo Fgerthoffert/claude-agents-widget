@@ -16,6 +16,8 @@ const TRAY_ID = 'main';
 export interface TrayActions {
   readonly onOpenSetup: () => void;
   readonly onFocusResult: (outcome: LastFocusOutcome) => void;
+  /** Records that the user went to a session, so the panel stops shouting about it. */
+  readonly onAcknowledge: (session: Session) => void;
 }
 
 /**
@@ -45,6 +47,8 @@ const menuOptions = (
           (candidate) => candidate.sessionId === item.sessionId,
         );
         if (session !== undefined) {
+          // Picking a session from the menu is the same act of attention as clicking its row.
+          actionsRef.current.onAcknowledge(session);
           void onSessionClick(session).then((outcome) => {
             actionsRef.current.onFocusResult(outcome);
           });
