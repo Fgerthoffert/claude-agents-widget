@@ -1,12 +1,18 @@
 import type { SetupState } from './evaluateSetupState';
+import type { DetectionHealth } from './types';
 
 export interface DiagnosticsInput {
+  /** The build identity string, e.g. `v0.2.1 (abc1234)` — see `formatBuildIdentity`. */
   readonly appVersion: string;
   /** `navigator.userAgent`, or whatever the shell can cheaply say about the platform. */
   readonly platform: string;
   readonly hookPath: string;
   readonly settingsPath: string;
+  /** Where the app log lives, so a bug report can be asked for it. */
+  readonly logPath: string;
   readonly setup: SetupState;
+  /** Whether the detection pipeline is working — the first thing to check (ADR-0011). */
+  readonly health: DetectionHealth;
   /** ISO-8601, passed in so this function stays pure and testable. */
   readonly generatedAt: string;
 }
@@ -31,8 +37,16 @@ export const formatDiagnostics = (input: DiagnosticsInput): string => {
     `app version     ${input.appVersion}`,
     `platform        ${input.platform}`,
     '',
+    // First, because a failing pipeline explains every other symptom below it.
+    `detection       ${input.health.failure === null ? 'ok' : 'FAILING'}`,
+    ...(input.health.failure === null ? [] : [`  failure       ${input.health.failure}`]),
+    ...(input.health.degraded.length === 0
+      ? []
+      : input.health.degraded.map((reason) => `  degraded      ${reason}`)),
+    '',
     `settings file   ${input.settingsPath}`,
     `hook script     ${input.hookPath}`,
+    `log file        ${input.logPath}`,
     `hook status     ${setup.hooks.status}`,
     `  script        ${setup.hooks.scriptInstalled ? 'installed' : 'missing'}`,
     `  registered    ${list(setup.hooks.registeredEvents)}`,

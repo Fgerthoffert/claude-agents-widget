@@ -28,6 +28,26 @@ fn toggle_panel(app: &tauri::AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default()
+        // A release build has no devtools, so `console.error` goes nowhere a user can reach.
+        // Everything the detection pipeline reports lands in
+        // ~/Library/Logs/<bundle id>/claude-agents-widget.log instead (ADR-0011). The file name
+        // is fixed because src/detection/appLogPath.ts tells the user where to look.
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Info)
+                .max_file_size(512 * 1024)
+                // `clear_targets` first: the plugin's own default LogDir target would otherwise
+                // write a second file under the product name, and only one path can be the one
+                // we tell the user about.
+                .clear_targets()
+                .targets([
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
+                        file_name: Some("claude-agents-widget".into()),
+                    }),
+                    tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
+                ])
+                .build(),
+        )
         // Detection core: FS watching of ~/.claude-agents-widget/sessions and `ps` for the
         // process scanner. Both are scoped in capabilities/default.json.
         .plugin(tauri_plugin_fs::init())

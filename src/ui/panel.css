@@ -223,6 +223,19 @@ body {
   font-size: 10.5px;
 }
 
+/* A broken pipeline is the one thing in the panel the user is meant to copy verbatim. */
+.panel__empty-error {
+  margin: 0;
+  padding: 4px 6px;
+  border-radius: 5px;
+  font-size: 10px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  background: var(--panel-hover);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 .panel__empty-link {
   padding: 0;
   border: 0;
@@ -587,6 +600,20 @@ body {
   flex: none;
   gap: 6px;
   justify-content: space-between;
+  align-items: center;
   padding: 6px 10px;
   border-top: 1px solid var(--panel-border);
+}
+
+/* Build identity: the line a bug report needs, kept out of the panel proper. */
+.setup__build {
+  margin: 0;
+  overflow: hidden;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  color: var(--panel-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  user-select: text;
+  -webkit-user-select: text;
 }

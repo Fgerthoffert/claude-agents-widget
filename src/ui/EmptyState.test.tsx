@@ -6,7 +6,16 @@ import { EmptyState } from './EmptyState';
 
 const renderEmpty = (props: Partial<Parameters<typeof EmptyState>[0]> = {}) => {
   const spies = { onInstall: vi.fn(), onOpenSetup: vi.fn() };
-  render(<EmptyState hooksInstalled={false} busy={false} outcome={null} {...spies} {...props} />);
+  render(
+    <EmptyState
+      hooksInstalled={false}
+      failure={null}
+      busy={false}
+      outcome={null}
+      {...spies}
+      {...props}
+    />,
+  );
   return spies;
 };
 
@@ -37,6 +46,28 @@ describe('EmptyState', () => {
 
     expect(screen.getByText('No agents running right now')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Install hook' })).not.toBeInTheDocument();
+  });
+
+  // The v0.2.0 bug: detection was dead and the panel called it an idle afternoon.
+  it('never calls a broken pipeline an idle one', () => {
+    renderEmpty({
+      hooksInstalled: true,
+      failure: 'Watching the hook state directory failed: fs.watch not allowed',
+    });
+
+    expect(screen.queryByText('No agents running right now')).not.toBeInTheDocument();
+    expect(screen.getByText('Detection is not running')).toBeInTheDocument();
+    expect(
+      screen.getByText('Watching the hook state directory failed: fs.watch not allowed'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/bug in the widget/).textContent).toContain('log file path');
+  });
+
+  it('does not offer an install as the fix for a failing sweep', () => {
+    renderEmpty({ hooksInstalled: false, failure: 'The detection sweep failed: boom' });
+
+    expect(screen.queryByRole('button', { name: 'Install hook' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Setup & diagnostics' })).toBeInTheDocument();
   });
 
   it('reports the outcome of an attempt in place', () => {

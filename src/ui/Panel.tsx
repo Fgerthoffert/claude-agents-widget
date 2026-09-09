@@ -13,7 +13,9 @@ import { copyDiagnostics } from './copyDiagnostics';
 import { onSessionClick } from './onSessionClick';
 import { showPanel } from './showPanel';
 import { togglePanelVisibility } from './togglePanelVisibility';
+import { useAppVersion } from './useAppVersion';
 import { useHomeDir } from './useHomeDir';
+import { useLogPath } from './useLogPath';
 import { useNowMs } from './useNowMs';
 import { usePersistedPanelFrame } from './usePersistedPanelFrame';
 import { useSessions } from './useSessions';
@@ -44,9 +46,11 @@ import './panel.css';
  * press that does not stays a click on the row (ADR-0008).
  */
 export const Panel = () => {
-  const sessions = useSessions();
+  const { sessions, health } = useSessions();
   const nowMs = useNowMs();
   const home = useHomeDir();
+  const buildIdentity = useAppVersion();
+  const logPath = useLogPath();
   const [lastFocus, setLastFocus] = useState<LastFocusOutcome | null>(null);
   const [showSetup, setShowSetup] = useState(false);
   const [setupDismissed, setSetupDismissed] = useState(false);
@@ -97,8 +101,9 @@ export const Panel = () => {
       setup: setup.setup,
       hookPath: setup.hookPath,
       settingsPath: setup.settingsPath,
+      health,
     });
-  }, [setup.setup, setup.hookPath, setup.settingsPath]);
+  }, [setup.setup, setup.hookPath, setup.settingsPath, health]);
 
   const handleOpenPane = useCallback((pane: 'automation' | 'accessibility') => {
     void openSystemSettings(pane);
@@ -114,6 +119,9 @@ export const Panel = () => {
       {setupOpen ? (
         <SetupView
           setup={setup.setup}
+          health={health}
+          buildIdentity={buildIdentity}
+          logPath={logPath}
           hookPath={setup.hookPath}
           settingsPath={setup.settingsPath}
           preview={setup.preview}
@@ -129,6 +137,7 @@ export const Panel = () => {
           {empty ? (
             <EmptyState
               hooksInstalled={setup.setup.hooks.status === 'done'}
+              failure={health.failure}
               busy={setup.busy}
               outcome={setup.outcome}
               onInstall={setup.install}

@@ -12,7 +12,12 @@ const mocks = vi.hoisted(() => ({
   openSystemSettings: vi.fn(),
 }));
 
-vi.mock('./useSessions', () => ({ useSessions: () => mocks.sessions.current }));
+vi.mock('./useSessions', () => ({
+  useSessions: () => ({
+    sessions: mocks.sessions.current,
+    health: { failure: null, degraded: [] },
+  }),
+}));
 vi.mock('./useSetupState', () => ({ useSetupState: () => mocks.controller.current }));
 vi.mock('../detection/openSystemSettings', () => ({
   openSystemSettings: mocks.openSystemSettings,

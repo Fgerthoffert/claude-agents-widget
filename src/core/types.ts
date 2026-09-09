@@ -104,6 +104,19 @@ export interface Session {
   readonly ancestors: readonly Ancestor[];
 }
 
+/**
+ * Whether the detection pipeline is actually producing data.
+ *
+ * An empty session list is ambiguous — nothing running, or nothing working? v0.2.0 could not
+ * tell the two apart and reported the first while the truth was the second (ADR-0011).
+ */
+export interface DetectionHealth {
+  /** `null` while sweeps are producing data; otherwise the sentence naming what broke. */
+  readonly failure: string | null;
+  /** Steps that failed while the sweep still produced usable rows. */
+  readonly degraded: readonly string[];
+}
+
 /** A `hooks.<Event>[].hooks[]` entry in `~/.claude/settings.json`. */
 export interface HookHandler {
   readonly type: string;
