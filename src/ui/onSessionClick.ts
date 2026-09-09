@@ -10,8 +10,9 @@ export interface SessionClickResult {
 /**
  * The one place a session click is acted on, from either the panel or the tray dropdown.
  *
- * Phase 4 owns the focus engine and exports `focusSession(session)` from
- * `src/detection/focusSession.ts`, returning `{ok: true, method}` or `{ok: false, reason}`.
+ * Phase 4 owns the focus engine and exports `focusSession(session): Promise<FocusResult>` from
+ * `src/detection/focusSession.ts`, where `FocusResult` (`src/core/focus/types.ts`) is
+ * `{ok: true, host, method, degradedFrom, detail}` or `{ok: false, host, reason, detail}`.
  * The two phases are being built in parallel, so this seam exists to give that engine exactly
  * one wiring point: when the module lands, the body becomes
  *
