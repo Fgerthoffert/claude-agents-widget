@@ -10,6 +10,49 @@ Per-release notes are also generated from the commit history and published on ea
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-09-09
+
+The panel earns its keep: it can be moved, it stays visible over full-screen apps, and it says at
+a glance which agents need you.
+
+### Added
+
+- **Floats above full-screen apps.** The window is converted to a non-activating `NSPanel` at
+  status level with `FullScreenAuxiliary`, so it stays visible over a full-screen editor, browser
+  or video call — and clicking it neither switches Spaces nor steals focus (ADR-0010).
+- **Two sections instead of one list**: _Running_ (the agent is working, nothing is expected of
+  you) above _Waiting for you_ (blocked on a prompt, or finished and unreviewed). Each sizes to
+  its content, scrolls independently, and is omitted when empty.
+- **A legend**, pinned to the bottom, explaining every glyph the rows use.
+- **Emoji state markers** — ✋ needs you, 🔄 working, ✅ done — replacing coloured dots, which
+  carried no meaning to anyone who had not learned the convention and none at all to a
+  colour-blind reader.
+- **Durations that say what they measure**: ▶ how long the current agent turn has been running,
+  ⏸ how long nothing has happened. Distinguished by shape, colour and weight, because the two
+  mean opposite things.
+- **A browser preview harness** (`npm run preview:ui`) that renders the real components against
+  fixture sessions, for reviewing the UI without launching the native shell.
+
+### Fixed
+
+- **The panel could not be moved at all.** `core:window:default` does not include
+  `start-dragging`, and nothing granted it, so every `data-tauri-drag-region` and every
+  `startDragging()` call was silently inert while all tests passed. The capability is now granted
+  and asserted by a test, and the panel can additionally be dragged by press-and-move from
+  anywhere on its surface — including over rows, which must stay clickable and so can never be
+  drag regions themselves.
+
+### Changed
+
+- **Translucent glass surface**: a transparent window over the macOS popover material, 18px
+  corners, a specular hairline edge, rounded rows and etched dividers.
+- **`ended` sessions are no longer shown.** The process is gone — the terminal was closed or the
+  session cleared — so there is nothing to return to and nothing to decide.
+- **The header carries no counts.** The menu bar already shows the aggregate, and in the panel the
+  rows are the count; per-section counts now sit next to what they count.
+- **The empty state installs the hook for you**, with a button rather than a terminal command, and
+  says something different once the hooks are in place instead of nagging.
+
 ## [0.1.0] — 2026-09-09
 
 First installable snapshot: a menu bar icon and an always-on-top panel that show every local Claude
