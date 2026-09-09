@@ -78,8 +78,12 @@ export interface MatchScannedSessionsInput {
 export interface ReconcileInput {
   readonly hookRecords: readonly SessionRecord[];
   readonly scanned: readonly ScannedSession[];
-  /** PIDs observed alive in this scan; empty means "the scan produced nothing usable". */
-  readonly livePids: readonly number[];
+  /**
+   * PIDs observed alive. An empty array means the scan ran and found no `claude` process —
+   * evidence that sessions have ended. `null` means the scan itself failed, which is not
+   * evidence of anything and must never expire a record.
+   */
+  readonly livePids: readonly number[] | null;
   /** Session id -> title, extracted from transcripts by the caller. */
   readonly titles: ReadonlyMap<string, string>;
   readonly nowMs: number;

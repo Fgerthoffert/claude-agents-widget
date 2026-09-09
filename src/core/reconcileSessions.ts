@@ -61,17 +61,21 @@ const fromScan = (scanned: ScannedSession, title: string | null, nowMs: number):
  */
 export const reconcileSessions = (input: ReconcileInput): readonly Session[] => {
   const { hookRecords, scanned, livePids, titles, nowMs } = input;
-  const live = new Set(livePids);
+  const live = livePids === null ? null : new Set(livePids);
   const scannedIds = new Set(scanned.map((session) => session.sessionId));
 
   const fromHooks = hookRecords.flatMap((record) => {
     const title = titles.get(record.sessionId) ?? null;
 
     // A `claude` PID we know about but no longer see is a session that died without a
-    // SessionEnd. When the hook never identified one, trust the hook state instead of
-    // guessing — an empty scan must not wipe the store.
+    // SessionEnd. Two cases deliberately do not expire anything: a hook that never identified
+    // a claude PID, and a scan that failed outright (`livePids === null`) — a broken `ps` must
+    // not empty the panel.
     const dead =
-      record.claudePid !== null && !live.has(record.claudePid) && !scannedIds.has(record.sessionId);
+      live !== null &&
+      record.claudePid !== null &&
+      !live.has(record.claudePid) &&
+      !scannedIds.has(record.sessionId);
     const state: SessionState = dead ? 'ended' : record.state;
 
     if (state === 'ended' && nowMs - Date.parse(record.updatedAt) > ENDED_TTL_MS) return [];

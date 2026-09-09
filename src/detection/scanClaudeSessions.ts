@@ -11,8 +11,11 @@ const PROJECTS_DIR = '.claude/projects';
 
 export interface ScanResult {
   readonly scanned: readonly ScannedSession[];
-  /** PIDs seen alive, which the reconciler uses to expire dead hook records. */
-  readonly livePids: readonly number[];
+  /**
+   * PIDs seen alive, which the reconciler uses to expire dead hook records. `null` when the
+   * scan failed, so a transient `ps` error is not mistaken for every session having ended.
+   */
+  readonly livePids: readonly number[] | null;
 }
 
 /** `ps` and `lsof` are allowlisted with fixed arguments in capabilities/default.json. */
@@ -87,10 +90,10 @@ export const scanClaudeSessions = async (): Promise<ScanResult> => {
     parseClaudeProcesses,
     () => null,
   );
-  if (processes === null) return { scanned: [], livePids: [] };
+  if (processes === null) return { scanned: [], livePids: null };
 
   const livePids = processes.map((entry) => entry.pid);
-  if (livePids.length === 0) return { scanned: [], livePids: [] };
+  if (livePids.length === 0) return { scanned: [], livePids };
 
   // Without cwds the pass still reports liveness, just no newly discovered sessions.
   const cwdByPid: ReadonlyMap<number, string> = await runLsof(livePids).then(

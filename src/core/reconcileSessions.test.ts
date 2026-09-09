@@ -112,9 +112,19 @@ describe('reconcileSessions', () => {
   });
 
   it('keeps a record whose claude pid was never identified, rather than guessing', () => {
-    // An empty or failed scan must never wipe the store.
     const sessions = run({ hookRecords: [record({ claudePid: null })], livePids: [] });
     expect(sessions[0]?.state).toBe('working');
+  });
+
+  it('expires nothing when the scan itself failed', () => {
+    // livePids null means "no information", unlike [] which means "no claude is running".
+    const sessions = run({ hookRecords: [record({ state: 'working' })], livePids: null });
+    expect(sessions[0]).toMatchObject({ sessionId: 'sess-1', state: 'working' });
+  });
+
+  it('does expire when the scan succeeded and found no claude process', () => {
+    const sessions = run({ hookRecords: [record({ state: 'working' })], livePids: [] });
+    expect(sessions[0]?.state).toBe('ended');
   });
 
   it('drops an ended session once its 5 minute grace period is up', () => {
