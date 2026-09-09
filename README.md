@@ -25,7 +25,7 @@ decision or it finished). Clicking a row raises the terminal or editor window th
 
 ## Install
 
-1. Download `Claude Agents Widget_<version>_aarch64.dmg` from
+1. Download `Claude.Agents.Widget_<version>_aarch64.dmg` from
    [Releases](https://github.com/Fgerthoffert/claude-agents-widget/releases).
 2. Open the `.dmg` and drag **Claude Agents Widget** to `/Applications`.
 3. **Release builds are not signed or notarized** (there is no Apple Developer account behind this

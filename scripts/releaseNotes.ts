@@ -68,7 +68,8 @@ process.stdout.write(
     subjects: log.split('\n'),
     previousTag,
     repoUrl,
-    dmgName: `Claude Agents Widget_${version}_aarch64.dmg`,
+    // tauri-action sanitizes asset names, replacing the product name's spaces with dots.
+    dmgName: `Claude.Agents.Widget_${version}_aarch64.dmg`,
     signed: process.argv.slice(2).includes('--signed'),
   }),
 );
