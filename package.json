@@ -18,10 +18,13 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "install-hooks": "node --experimental-strip-types scripts/installHooks.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-fs": "^2.5.2",
+    "@tauri-apps/plugin-shell": "^2.3.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

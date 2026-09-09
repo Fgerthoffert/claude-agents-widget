@@ -10,6 +10,9 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
+    /* Pulls hooks/*.mjs into the program so ESLint's project service can parse it.
+       `checkJs` stays off: the hook script is plain ESM, verified by its integration test. */
+    "allowJs": true,
     "isolatedModules": true,
     /* `node` for vite.config.ts / vitest.config.ts, which this project also type-checks. */
     "types": ["node"],
@@ -26,5 +29,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "vite.config.ts", "vitest.config.ts"]
+  "include": ["src", "hooks", "scripts", "vite.config.ts", "vitest.config.ts"]
 }

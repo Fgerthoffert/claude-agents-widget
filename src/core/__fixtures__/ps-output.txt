@@ -1,0 +1,13 @@
+  PID  PPID COMMAND
+    1     0 /sbin/launchd
+  201     1 /usr/libexec/logd
+  310   201 /bin/zsh -il
+  411   310 claude
+  412   310 claude --dangerously-skip-permissions
+  521     1 /Applications/Claude.app/Contents/MacOS/Claude
+  522   521 /Applications/Claude.app/Contents/Frameworks/Claude Helper.app/Contents/MacOS/Claude Helper --type=renderer --lang=en-GB
+  610     1 /Applications/Claude Status.app/Contents/Resources/plugins/claude-status/scripts/session-status --daemon --session-id 11111111-1111-1111-1111-111111111111
+  700   310 node /Users/test/.npm-global/lib/node_modules/@anthropic-ai/claude-code/cli.js
+  810   310 /Users/test/.claude/local/claude --resume
+  900   310 /bin/zsh /bin/zsh -c source /Users/test/.claude/shell-snapshots/snapshot-zsh-1.sh && ps -axo pid=,ppid=,comm=
+  950   310 claude-monitor --watch

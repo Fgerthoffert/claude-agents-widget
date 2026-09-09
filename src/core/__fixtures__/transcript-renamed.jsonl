@@ -1,0 +1,6 @@
+{"type":"custom-title","customTitle":"Detection core","sessionId":"sess-2"}
+{"type":"agent-name","agentName":"Detection core","sessionId":"sess-2"}
+{"type":"user","cwd":"/Users/test/proj","sessionId":"sess-2","promptSource":"typed","message":{"role":"user","content":"Wire up the reconciler"},"uuid":"55555555-5555-5555-5555-555555555555","timestamp":"2026-09-09T12:05:00.000Z"}
+{"type":"ai-title","aiTitle":"Reconciler wiring","sessionId":"sess-2"}
+{"type":"custom-title","customTitle":"Detection core (phase 2)","sessionId":"sess-2"}
+{"type":"last-prompt","lastPrompt":null,"leafUuid":"55555555-5555-5555-5555-555555555555","sessionId":"sess-2"}

@@ -22,6 +22,10 @@ fn toggle_panel(app: &tauri::AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Detection core: FS watching of ~/.claude-agents-widget/sessions and `ps` for the
+        // process scanner. Both are scoped in capabilities/default.json.
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             // Menu-bar-only app: no Dock icon, never takes over as the active app.
             #[cfg(target_os = "macos")]

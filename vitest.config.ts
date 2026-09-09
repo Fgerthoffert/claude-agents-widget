@@ -1,11 +1,12 @@
 import { defineConfig } from 'vitest/config';
 
-// No jsdom yet: Phase 1 only tests pure functions in src/core.
-// Coverage thresholds are scoped to src/core until Phase 3 adds component tests.
+// No jsdom yet: only pure functions in src/core plus the hook integration test.
+// Coverage thresholds are scoped to src/core until Phase 3 adds component tests;
+// src/detection is the imperative shell (Tauri plugin calls) and is exercised manually.
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'hooks/**/*.test.ts', 'scripts/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
