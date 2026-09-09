@@ -143,13 +143,13 @@ Menu bar icon + floating always-on-top panel listing every local Claude Code ses
   PRP: link to generated plan file once created
 -->
 
-| #   | Phase               | Description                                                                                                         | Status   | Parallel | Depends | PRP Plan                                              |
-| --- | ------------------- | ------------------------------------------------------------------------------------------------------------------- | -------- | -------- | ------- | ----------------------------------------------------- |
-| 1   | Scaffold & harness  | Tauri 2 + TS project, lint/format/typecheck, Vitest, CLAUDE.md, ADR seed, PR test workflow                          | complete | -        | -       | [plan](../plans/phase-1-scaffold-and-harness.plan.md) |
-| 2   | Detection core      | Hook CLI + installer, session state files, FS watcher, process scanner, reconciled session store with state machine | complete | -        | 1       | [plan](../plans/phase-2-detection-core.plan.md)       |
-| 3   | UI surfaces         | Menu bar tray + dropdown, always-on-top floating panel, needs-input emphasis, launch at login                       | complete | with 4   | 2       | [plan](../plans/phase-3-ui-surfaces.plan.md)          |
-| 4   | Focus engine        | Process-tree app identification, per-app focus adapters (Terminal.app, iTerm2, VS Code)                             | complete | with 3   | 2       | [plan](../plans/phase-4-focus-engine.plan.md)         |
-| 5   | Packaging & release | Dev-build-on-main workflow, release workflow (sign/notarize if possible), first-run permission guide, docs          | pending  | -        | 3, 4    | -                                                     |
+| #   | Phase               | Description                                                                                                         | Status   | Parallel | Depends | PRP Plan                                               |
+| --- | ------------------- | ------------------------------------------------------------------------------------------------------------------- | -------- | -------- | ------- | ------------------------------------------------------ |
+| 1   | Scaffold & harness  | Tauri 2 + TS project, lint/format/typecheck, Vitest, CLAUDE.md, ADR seed, PR test workflow                          | complete | -        | -       | [plan](../plans/phase-1-scaffold-and-harness.plan.md)  |
+| 2   | Detection core      | Hook CLI + installer, session state files, FS watcher, process scanner, reconciled session store with state machine | complete | -        | 1       | [plan](../plans/phase-2-detection-core.plan.md)        |
+| 3   | UI surfaces         | Menu bar tray + dropdown, always-on-top floating panel, needs-input emphasis, launch at login                       | complete | with 4   | 2       | [plan](../plans/phase-3-ui-surfaces.plan.md)           |
+| 4   | Focus engine        | Process-tree app identification, per-app focus adapters (Terminal.app, iTerm2, VS Code)                             | complete | with 3   | 2       | [plan](../plans/phase-4-focus-engine.plan.md)          |
+| 5   | Packaging & release | Dev-build-on-main workflow, release workflow (sign/notarize if possible), first-run permission guide, docs          | complete | -        | 3, 4    | [plan](../plans/phase-5-packaging-and-release.plan.md) |
 
 ### Phase Details
 
