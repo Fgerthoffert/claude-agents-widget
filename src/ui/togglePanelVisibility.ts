@@ -24,7 +24,7 @@ export const togglePanelVisibility = async (): Promise<void> => {
     // Always-on-top can be lost when macOS moves the window between spaces; re-assert it on
     // every reveal so the panel comes back on top rather than behind whatever is in front.
     await panel.setAlwaysOnTop(true);
-    // Strictly after `setAlwaysOnTop`, which rewrites the window level down to 3 (ADR-0010).
+    // Strictly after `setAlwaysOnTop`, which rewrites the level back below full screen (0010).
     await floatPanelAboveFullScreen();
     await panel.setFocus();
   } catch (error) {
