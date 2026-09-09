@@ -10,6 +10,27 @@ Per-release notes are also generated from the commit history and published on ea
 
 ## [Unreleased]
 
+## [0.2.1] — 2026-09-09
+
+### Fixed
+
+- **The panel detected nothing.** `watch` is not a default feature of `tauri-plugin-fs`, so the
+  plugin never registered its `watch` command and `watchImmediate()` rejected at runtime. That
+  call was awaited outside the detection pipeline's error handling, so it took the hook reader,
+  the process scanner and the polling interval down with it before the first sweep — while the
+  panel said "No agents running right now" and the only error path was a `console.error` that
+  goes nowhere in a release build.
+- **Failures can no longer be silent.** Logs are written to the app log directory, the watcher is
+  demoted to a latency optimisation (losing it costs seconds, not detection), the two detection
+  sources degrade independently instead of discarding each other's rows, and the panel renders a
+  named failure rather than claiming nothing is running. Cargo features and capability scopes are
+  asserted by tests, at the level where both bugs of this shape have lived.
+
+### Added
+
+- **Builds identify themselves**: a tagged release shows its version, any other build shows the
+  version plus its short commit hash, in the diagnostics view and the copied diagnostics dump.
+
 ## [0.2.0] — 2026-09-09
 
 The panel earns its keep: it can be moved, it stays visible over full-screen apps, and it says at
