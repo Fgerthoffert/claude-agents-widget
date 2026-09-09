@@ -58,12 +58,6 @@ const seeds: Readonly<Record<Exclude<MockScenario, 'empty'>, readonly Seed[]>> =
       state: 'done_idle',
       ageSeconds: 640,
     },
-    {
-      title: 'Bump dependencies',
-      cwd: '/Users/you/GitHub/design-system',
-      state: 'ended',
-      ageSeconds: 95,
-    },
   ],
   busy: [
     {
@@ -137,12 +131,6 @@ const seeds: Readonly<Record<Exclude<MockScenario, 'empty'>, readonly Seed[]>> =
       state: 'done_idle',
       ageSeconds: 4300,
     },
-    {
-      title: 'Bump dependencies',
-      cwd: '/Users/you/GitHub/design-system',
-      state: 'ended',
-      ageSeconds: 140,
-    },
   ],
   quiet: [
     {
@@ -156,12 +144,6 @@ const seeds: Readonly<Record<Exclude<MockScenario, 'empty'>, readonly Seed[]>> =
       cwd: '/Users/you/Documents/notes',
       state: 'done_idle',
       ageSeconds: 512,
-    },
-    {
-      title: 'Bump dependencies',
-      cwd: '/Users/you/GitHub/design-system',
-      state: 'ended',
-      ageSeconds: 60,
     },
   ],
   blocked: [

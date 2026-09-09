@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 
 import { describeAge } from '../core/describeAge';
+import { groupSessions } from '../core/groupSessions';
 import { describeSession } from '../core/describeSession';
 import { EmptyState } from '../ui/EmptyState';
 import { PanelHeader } from '../ui/PanelHeader';
 import { PanelLegend } from '../ui/PanelLegend';
-import { SessionRow } from '../ui/SessionRow';
+import { SessionGroup } from '../ui/SessionGroup';
 import { useNowMs } from '../ui/useNowMs';
 import { buildMockSessions } from './buildMockSessions';
 import type { MockScenario } from './buildMockSessions';
@@ -52,6 +53,13 @@ export const PanelPreview = () => {
   // Ages are anchored to mount, not to every tick, so rows visibly age as you watch them.
   const [mountedMs] = useState(nowMs);
   const sessions = useMemo(() => buildMockSessions(scenario, mountedMs), [scenario, mountedMs]);
+  const groups = groupSessions(sessions);
+  const toRows = (group: readonly Session[]) =>
+    group.map((session) => ({
+      session,
+      description: describeSession(session, home),
+      age: describeAge(session, nowMs),
+    }));
 
   const onSelect = (session: Session) => {
     setLastAction(
@@ -71,20 +79,27 @@ export const PanelPreview = () => {
             );
           }}
         />
-        {sessions.length === 0 ? (
+        {groups.running.length === 0 && groups.waiting.length === 0 ? (
           <EmptyState />
         ) : (
-          <ul className="panel__list">
-            {sessions.map((session) => (
-              <SessionRow
-                key={session.sessionId}
-                session={session}
-                description={describeSession(session, home)}
-                age={describeAge(session, nowMs)}
+          <div className="panel__groups">
+            {groups.running.length > 0 && (
+              <SessionGroup
+                label="Running"
+                rows={toRows(groups.running)}
+                attention={false}
                 onSelect={onSelect}
               />
-            ))}
-          </ul>
+            )}
+            {groups.waiting.length > 0 && (
+              <SessionGroup
+                label="Waiting for you"
+                rows={toRows(groups.waiting)}
+                attention={groups.waiting.some((session) => session.state === 'needs_input')}
+                onSelect={onSelect}
+              />
+            )}
+          </div>
         )}
         <PanelLegend />
       </main>

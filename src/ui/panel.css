@@ -98,23 +98,68 @@ body {
   background: var(--panel-hover);
 }
 
-/* ---- Session list ----------------------------------------------------------------------- */
+/* ---- Sections: running on top, waiting on the user below -------------------------------- */
 
-.panel__list {
+.panel__groups {
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+/* Each section takes the height its rows need, up to its share of the panel, and scrolls
+   inside that — so a long list on one side cannot squeeze the other out of view. */
+.group {
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+  flex: 0 1 auto;
+  flex-direction: column;
+}
+
+.group + .group {
+  border-top: 1px solid var(--panel-border);
+}
+
+.group__heading {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  padding: 5px 8px 3px;
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--panel-muted);
+}
+
+.group__heading--attention {
+  color: var(--state-needs-input);
+}
+
+.group__count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.group__list {
   overflow-x: hidden;
   overflow-y: auto;
   min-height: 0;
   margin: 0;
-  padding: 2px 0;
-  flex: 1;
+  padding: 0 0 2px;
   list-style: none;
 }
 
-.panel__list::-webkit-scrollbar {
+.group__list::-webkit-scrollbar {
   width: 6px;
 }
 
-.panel__list::-webkit-scrollbar-thumb {
+.group__list::-webkit-scrollbar-thumb {
   border-radius: 3px;
   background: var(--panel-border);
 }
@@ -218,14 +263,20 @@ body {
 }
 
 .row__age-icon {
-  font-size: 9.5px;
-  line-height: 1;
+  font-size: 8px;
+  line-height: 1.4;
 }
 
-/* Same number, opposite meanings: time the agent has been working, or time nothing has
-   happened. The icon carries the distinction; colour only reinforces it (ADR-0008). */
+/* Same number, opposite meanings: how long the agent has been processing, or how long nothing
+   has happened. Play against pause, accent against muted, semibold against regular — three
+   channels, so the two can never be read as each other (ADR-0008). */
 .row__age--active {
+  font-weight: 600;
   color: var(--state-working);
+}
+
+.row__age--active .row__age-icon {
+  font-size: 7px;
 }
 
 /* ---- Per-state emphasis ----------------------------------------------------------------- */
@@ -276,12 +327,6 @@ body {
   }
 }
 
-/* Ended sessions stay for five minutes so a finished agent does not vanish mid-glance
-   (ADR-0008), but they must not read as live. */
-.row[data-state='ended'] {
-  opacity: 0.45;
-}
-
 /* ---- Legend: the key to the row glyphs -------------------------------------------------- */
 
 .panel__legend {
@@ -304,4 +349,9 @@ body {
 
 .panel__legend-item {
   white-space: nowrap;
+}
+
+.panel__legend-item--active {
+  font-weight: 600;
+  color: var(--state-working);
 }

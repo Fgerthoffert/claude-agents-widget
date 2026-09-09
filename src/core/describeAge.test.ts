@@ -23,24 +23,24 @@ describe('describeAge', () => {
   it('reads a working session as elapsed processing time', () => {
     expect(describeAge(session('working'), NOW)).toEqual({
       kind: 'active',
-      icon: '⏱',
+      icon: '▶',
       text: '4m',
-      label: 'working for 4m',
+      label: 'processing for 4m',
     });
   });
 
   it('reads a blocked session as time spent waiting for the user', () => {
     expect(describeAge(session('needs_input'), NOW)).toMatchObject({
       kind: 'inactive',
-      icon: '⏳',
-      label: 'waiting for 4m',
+      icon: '⏸',
+      label: 'waiting for you for 4m',
     });
   });
 
   it.each<SessionState>(['done_idle', 'ended'])('reads %s as time spent inactive', (state) => {
     expect(describeAge(session(state), NOW)).toMatchObject({
       kind: 'inactive',
-      icon: '⏳',
+      icon: '⏸',
       label: 'inactive for 4m',
     });
   });

@@ -4,15 +4,15 @@ const states = [
   { emoji: sessionEmoji('needs_input'), label: 'needs you' },
   { emoji: sessionEmoji('working'), label: 'working' },
   { emoji: sessionEmoji('done_idle'), label: 'done' },
-  { emoji: sessionEmoji('ended'), label: 'ended' },
 ] as const;
 
 /**
  * The key to the row glyphs, pinned to the bottom of the panel.
  *
- * Emoji are only self-explanatory once: the legend is what makes them learnable, and it is also
- * the only place the two duration icons can be told apart, since a row shows one or the other
- * but never both. It carries `data-tauri-drag-region` so the footer drags like the header.
+ * Emoji are only self-explanatory once: the legend is what makes them learnable, and it is the
+ * only place the two duration icons appear together, since a row shows one or the other but
+ * never both. `ended` is absent because those sessions are never rendered (`visibleSessions`).
+ * It carries `data-tauri-drag-region` so the footer drags like the header.
  */
 export const PanelLegend = () => (
   <footer className="panel__legend" data-tauri-drag-region>
@@ -24,11 +24,11 @@ export const PanelLegend = () => (
       ))}
     </span>
     <span className="panel__legend-line" data-tauri-drag-region>
-      <span className="panel__legend-item">
-        <span aria-hidden="true">⏱</span> working for
+      <span className="panel__legend-item panel__legend-item--active">
+        <span aria-hidden="true">▶</span> processing time
       </span>
       <span className="panel__legend-item">
-        <span aria-hidden="true">⏳</span> inactive for
+        <span aria-hidden="true">⏸</span> inactive time
       </span>
     </span>
   </footer>

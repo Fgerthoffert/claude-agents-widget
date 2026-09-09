@@ -161,3 +161,42 @@ position lands correctly across a real monitor change.
 Clicking a row calls `src/ui/onSessionClick.ts`, which was a seam with a stub body until Phase 4
 landed. It now flattens the focus engine's typed `FocusResult` into `{ok, detail}` — see
 ADR-0007.
+
+## Revision — 2026-09-09, after the first hands-on review
+
+The panel was reviewed in the browser harness (`npm run preview:ui`, PR #5) and five changes came
+out of it. All are user decisions, recorded here because they overturn choices this ADR argued
+for.
+
+**Emoji replace the coloured dots.** ✋ needs you, 🔄 working, ✅ done. A shape carries meaning
+where a colour only carries a convention the user has to learn, and colour-blind users cannot
+read it at all. `sessionEmoji` is the single source of truth, shared with the tray dropdown.
+
+**A legend is pinned to the bottom.** Emoji are self-explanatory only once. The legend is also
+the only place the two duration icons appear together, since a row shows one or the other.
+
+**The header no longer carries counts.** The menu bar already shows the aggregate, and inside the
+panel the rows _are_ the count. The header is now just the grip and the dismiss button; it stays
+because with a full list there is no background left to drag from. Counts moved to the section
+headings, next to what they count.
+
+**The duration answers two different questions, and says which.** A working session's `updatedAt`
+is stamped when the current turn began, so its age is the length of _this_ processing run; every
+other state stamps it when the agent stopped, so the same number means how long nothing has
+happened. `describeAge` distinguishes them on three channels at once — ▶ against ⏸ (the first
+attempt, ⏱ against ⏳, was rejected as too similar at 10px), the working accent against muted
+grey, and semibold against regular.
+
+**`ended` sessions are no longer rendered.** This ADR argued for keeping them dimmed so a
+finished agent would not vanish mid-glance. That reasoning was wrong: `ended` means the `claude`
+process is gone — terminal closed or session cleared — so there is nothing to click through to
+and nothing to decide. `visibleSessions` drops them; the reconciler still tracks the state
+because that is how a session leaves the store, and diagnostics may want it.
+
+**The panel is split into two sections.** "Running" on top (the agent is working, nothing is
+expected of the user) and "Waiting for you" below (`needs_input` and `done_idle` — different
+reasons, same conclusion: the agent stopped and it is the user's move). This is the only question
+the panel exists to answer, so the layout now states it instead of leaving it to be inferred from
+glyphs. Sections are content-sized up to their share of the panel and scroll independently, so a
+long list on one side cannot squeeze the other out of view; an empty section is omitted rather
+than heading an empty list. Order inside each section is still the store's.

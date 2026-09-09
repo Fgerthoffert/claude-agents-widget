@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -58,15 +58,16 @@ describe('Panel', () => {
       session({ sessionId: 'c', title: 'Docs pass', state: 'done_idle' }),
     ]);
 
+    // Running comes first as a section, so a working session precedes a blocked one here even
+    // though the store sorts blocked sessions to the top. Titles rather than whole rows:
+    // every row now opens with a state emoji.
     const rows = screen.getAllByRole('listitem');
     expect(rows).toHaveLength(3);
-    // Titles rather than whole rows: every row now opens with a state emoji.
     expect(rows.map((row) => row.querySelector('.row__title')?.textContent)).toEqual([
-      'Blocked on permission',
       'Refactoring the scanner',
+      'Blocked on permission',
       'Docs pass',
     ]);
-    expect(screen.getByText('Refactoring the scanner')).toBeInTheDocument();
   });
 
   it('shows the session name as the primary content', () => {
@@ -98,10 +99,55 @@ describe('Panel', () => {
     expect(screen.getByText('needs permission · /Users/test/code/api')).toBeInTheDocument();
   });
 
-  it('keeps ended sessions visible but marked as ended', () => {
-    renderPanel([session({ sessionId: 'a', title: 'Finished', state: 'ended' })]);
+  it('leaves ended sessions out: the process is gone, so there is nothing to go back to', () => {
+    renderPanel([
+      session({ sessionId: 'a', title: 'Gone', state: 'ended' }),
+      session({ sessionId: 'b', title: 'Busy' }),
+    ]);
 
-    expect(rowByName(/^Finished/)).toHaveAttribute('data-state', 'ended');
+    expect(screen.queryByText('Gone')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+  });
+
+  it('splits the panel into what is running and what is on the user', () => {
+    renderPanel([
+      session({ sessionId: 'a', title: 'Blocked', state: 'needs_input' }),
+      session({ sessionId: 'b', title: 'Busy' }),
+      session({ sessionId: 'c', title: 'Finished', state: 'done_idle' }),
+    ]);
+
+    const sections = screen.getAllByRole('region');
+    expect(sections).toHaveLength(2);
+
+    const [running, waiting] = sections;
+    expect(running?.querySelector('.group__heading')?.textContent).toBe('Running1');
+    expect(
+      [...(running?.querySelectorAll('.row__title') ?? [])].map((node) => node.textContent),
+    ).toEqual(['Busy']);
+
+    expect(waiting?.querySelector('.group__heading')?.textContent).toBe('Waiting for you2');
+    expect(
+      [...(waiting?.querySelectorAll('.row__title') ?? [])].map((node) => node.textContent),
+    ).toEqual(['Blocked', 'Finished']);
+  });
+
+  it('omits a section that has nothing in it rather than heading an empty list', () => {
+    renderPanel([session({ sessionId: 'a', title: 'Busy' })]);
+
+    const sections = screen.getAllByRole('region');
+    expect(sections).toHaveLength(1);
+    expect(sections[0]?.querySelector('.group__heading')?.textContent).toBe('Running1');
+  });
+
+  it('marks the waiting section as needing attention only when a session is blocked', () => {
+    renderPanel([session({ sessionId: 'a', title: 'Finished', state: 'done_idle' })]);
+    expect(document.querySelector('.group__heading--attention')).toBeNull();
+
+    cleanup();
+    renderPanel([session({ sessionId: 'b', title: 'Blocked', state: 'needs_input' })]);
+    expect(document.querySelector('.group__heading--attention')?.textContent).toBe(
+      'Waiting for you1',
+    );
   });
 
   it('leaves rows out of the drag region so a click is not read as a drag', () => {
@@ -170,12 +216,14 @@ describe('Panel', () => {
     renderPanel([session({ sessionId: 'a', title: 'Busy' })]);
 
     const legend = screen.getByRole('contentinfo');
-    for (const label of ['needs you', 'working', 'done', 'ended', 'working for', 'inactive for']) {
+    for (const label of ['needs you', 'working', 'done', 'processing time', 'inactive time']) {
       expect(legend.textContent).toContain(label);
     }
-    for (const glyph of ['✋', '🔄', '✅', '💤', '⏱', '⏳']) {
+    for (const glyph of ['✋', '🔄', '✅', '▶', '⏸']) {
       expect(legend.textContent).toContain(glyph);
     }
+    // Ended sessions are never rendered, so the legend must not advertise them.
+    expect(legend.textContent).not.toContain('ended');
   });
 
   it('distinguishes time spent working from time spent idle', () => {
@@ -186,17 +234,17 @@ describe('Panel', () => {
     ]);
 
     const age = (name: RegExp) => rowByName(name).querySelector('.row__age');
-    expect(age(/Busy/)?.textContent).toContain('⏱');
+    expect(age(/Busy/)?.textContent).toContain('▶');
     expect(age(/Busy/)).toHaveClass('row__age--active');
-    expect(age(/Waiting/)?.textContent).toContain('⏳');
+    expect(age(/Waiting/)?.textContent).toContain('⏸');
     expect(age(/Waiting/)).not.toHaveClass('row__age--active');
-    expect(age(/Finished/)?.textContent).toContain('⏳');
+    expect(age(/Finished/)?.textContent).toContain('⏸');
   });
 
   it('labels the state and what the duration measures for screen readers', () => {
     renderPanel([session({ sessionId: 'a', title: 'Busy', state: 'working' })]);
 
-    expect(rowByName(/Busy/).getAttribute('aria-label')).toContain('working for');
+    expect(rowByName(/Busy/).getAttribute('aria-label')).toContain('processing for');
   });
 
   it('ages a row on its own, without new store data', () => {
