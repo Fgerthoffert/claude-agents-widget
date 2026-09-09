@@ -96,8 +96,20 @@ describe('buildTrayModel', () => {
 
   it('keeps the menu bar label to one character however many sessions there are', () => {
     const sessions = Array.from({ length: 1000 }, (_, index) =>
-      session(`s${String(index)}`, 'done_idle', 'finished'),
+      session(`s${String(index)}`, 'needs_input', 'blocked'),
     );
     expect(buildTrayModel(sessions).label).toBe('●');
+  });
+
+  it('leaves the menu bar unmarked when everything is merely finished', () => {
+    // A finished agent must not make the menu bar shout (ADR-0014).
+    const sessions = Array.from({ length: 20 }, (_, index) =>
+      session(`s${String(index)}`, 'done_idle', 'finished'),
+    );
+
+    expect(buildTrayModel(sessions).label).toBe('');
+    // …but it is still listed and still counted in the dropdown, where there is room for words.
+    expect(buildTrayModel(sessions).summary).toContain('20 done');
+    expect(buildTrayModel(sessions).items).toHaveLength(10);
   });
 });

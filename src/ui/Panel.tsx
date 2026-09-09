@@ -32,13 +32,15 @@ import type { Session } from '../core/types';
 import './panel.css';
 
 /**
- * The always-on-top floating panel, split into the two things the user actually distinguishes:
- * sessions that are running and need nothing, and sessions that have stopped and need them.
+ * The always-on-top floating panel, split into the three things the user actually distinguishes:
+ * **Running** (busy, needs nothing), **Waiting for you** (blocked on an answer and unable to
+ * proceed) and **Done** (stopped, and not blocked).
  *
- * Running sits on top: it is the half that changes on its own, and it keeps the section the
- * user has to act on adjacent to the legend that explains it. Order inside each section comes
- * from the store (`needs_input` before `done_idle`, then most recent first) and is deliberately
- * not touched here — emphasis is styling only, so a row never moves under the user's cursor.
+ * Waiting used to hold finished sessions too, which made the heading claim more than it meant
+ * (ADR-0014). Order inside each section comes from the store (`needs_input` before `done_idle`,
+ * then most recent first) and is deliberately not touched here — emphasis is styling only, so a
+ * row never moves under the user's cursor. An empty section renders nothing at all: vertical
+ * space is the panel's scarcest resource and a heading over no rows spends it on an absence.
  *
  * Exactly one row is ever loud, and clicking it makes it calm: this component owns the
  * acknowledgement map and hands `loudSessionId` the decision (ADR-0013). It also owns what
@@ -151,7 +153,8 @@ export const Panel = () => {
 
   const loud = useMemo(() => loudSessionId(sessions, seen), [sessions, seen]);
 
-  const empty = groups.running.length === 0 && groups.waiting.length === 0;
+  const empty =
+    groups.running.length === 0 && groups.waiting.length === 0 && groups.done.length === 0;
   // Auto-open only once the probe has really run, so the placeholder state never flashes it up.
   const setupOpen = showSetup || (setup.ready && setup.setup.needsSetup && !setupDismissed);
 
@@ -201,7 +204,17 @@ export const Panel = () => {
                 <SessionGroup
                   label="Waiting for you"
                   rows={toRows(groups.waiting)}
-                  attention={groups.waiting.some((session) => session.state === 'needs_input')}
+                  attention
+                  loudSessionId={loud}
+                  pendingSessionId={pendingSessionId}
+                  onSelect={handleSelect}
+                />
+              )}
+              {groups.done.length > 0 && (
+                <SessionGroup
+                  label="Done"
+                  rows={toRows(groups.done)}
+                  attention={false}
                   loudSessionId={loud}
                   pendingSessionId={pendingSessionId}
                   onSelect={handleSelect}

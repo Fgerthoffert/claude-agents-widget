@@ -11,7 +11,14 @@
 // It must never fail loudly and never write to stdout (Claude Code interprets hook stdout).
 
 import { execFileSync } from 'node:child_process';
-import { appendFileSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
 import process from 'node:process';
@@ -22,15 +29,29 @@ const STATE_DIR_NAME = '.claude-agents-widget';
  * Hook event -> session state. Events absent from this map leave the state untouched.
  * A Map, not an object literal: the event name arrives in a JSON payload, and a plain-object
  * lookup would resolve `toString` or `constructor` to an inherited value.
+ *
+ * `SessionStart` is `done_idle`, not `working`: a session that has just started — or just been
+ * cleared, resumed or forked — is sitting at an empty prompt having been asked to do nothing.
+ * Reporting it as `working` is what made a `/clear` look like it left work behind (ADR-0014).
+ * Mirrored in src/core/mapHookEventToState.ts.
  * @type {Map<string, string>}
  */
 const EVENT_STATE = new Map([
-  ['SessionStart', 'working'],
+  ['SessionStart', 'done_idle'],
   ['UserPromptSubmit', 'working'],
   ['Stop', 'done_idle'],
   ['Notification', 'needs_input'],
   ['SessionEnd', 'ended'],
 ]);
+
+/** `Notification` matchers that block nothing: Claude Code noting a session has gone quiet. */
+const IDLE_NOTIFICATIONS = new Set(['idle_prompt']);
+
+/**
+ * `SessionStart` sources that replace the session that was in this terminal. `compact` is
+ * absent on purpose: compaction keeps the same session going.
+ */
+const REPLACING_SOURCES = new Set(['startup', 'clear', 'resume', 'fork']);
 
 const widgetHome = () => join(homedir(), STATE_DIR_NAME);
 
@@ -193,6 +214,49 @@ const writeAtomic = (file, record) => {
   renameSync(temp, file);
 };
 
+/**
+ * Retires every other session recorded against this same `claude` process.
+ *
+ * One CLI process runs one session at a time (ADR-0012), so a `SessionStart` naming a new
+ * session id is proof that any other record sharing its `claudePid` is finished. `/clear` on
+ * Claude Code 2.1.236 does emit `SessionEnd` (`reason: "clear"`) for the outgoing session about
+ * 80ms first, which retires it on its own — but that is one build's behaviour, not a contract,
+ * and the widget relied on it entirely before. Writing `ended` here means the panel drops the
+ * row on the strength of the *new* session's arrival, whether or not the old one said goodbye.
+ *
+ * Best-effort by construction: a file that will not read or write is skipped, because failing to
+ * tidy up a stale record must never cost the user the event that just happened.
+ * @param {string} sessionsDir
+ * @param {string} currentSessionId
+ * @param {number} claudePid
+ */
+const retireOtherSessions = (sessionsDir, currentSessionId, claudePid) => {
+  /** @type {string[]} */
+  let names = [];
+  try {
+    names = readdirSync(sessionsDir);
+  } catch {
+    return;
+  }
+
+  for (const name of names) {
+    if (!name.endsWith('.json') || name === `${currentSessionId}.json`) continue;
+    const file = join(sessionsDir, name);
+    try {
+      const existing = readExisting(file);
+      if (existing.claudePid !== claudePid || existing.state === 'ended') continue;
+      writeAtomic(file, {
+        ...existing,
+        state: 'ended',
+        endReason: 'superseded',
+        updatedAt: new Date().toISOString(),
+      });
+    } catch {
+      // Another hook may be mid-write on that session; its own events will settle it.
+    }
+  }
+};
+
 const main = () => {
   const raw = readStdin();
   if (raw.trim() === '') {
@@ -235,18 +299,27 @@ const main = () => {
       : /** @type {{ pid: number; comm: string; args: string }[]} */ (priorAncestors);
 
   const isNotification = event === 'Notification';
+  const notificationType = isNotification ? asString(payload.notification_type) : null;
+  // An idle notification is not a question: nothing is blocked on an answer, so it reads as
+  // finished work rather than as "waiting for you" (ADR-0014).
+  const eventState =
+    isNotification && notificationType !== null && IDLE_NOTIFICATIONS.has(notificationType)
+      ? 'done_idle'
+      : event === null
+        ? null
+        : EVENT_STATE.get(event);
+
   const record = {
     ...existing,
     sessionId,
     cwd: asString(payload.cwd) ?? asString(existing.cwd),
     transcriptPath: asString(payload.transcript_path) ?? asString(existing.transcriptPath),
-    state:
-      (event === null ? null : EVENT_STATE.get(event)) ?? asString(existing.state) ?? 'working',
+    state: eventState ?? asString(existing.state) ?? 'done_idle',
     lastEvent: event ?? asString(existing.lastEvent),
     // Notification carries `notification_type` (permission_prompt, idle_prompt, …); older
     // Claude Code builds sent a human-readable `message`. Keep whichever arrives, and clear
     // both on any other event so the UI never shows a stale prompt.
-    notificationType: isNotification ? asString(payload.notification_type) : null,
+    notificationType,
     notificationMessage: isNotification ? asString(payload.message) : null,
     endReason: event === 'SessionEnd' ? asString(payload.reason) : null,
     agentId: asString(payload.agent_id),
@@ -258,6 +331,17 @@ const main = () => {
   };
 
   writeAtomic(file, record);
+
+  // After this session's own record is safely on disk, not before: tidying up is worth nothing
+  // if it costs the event that triggered it.
+  const source = asString(payload.source);
+  if (
+    event === 'SessionStart' &&
+    record.claudePid !== null &&
+    (source === null || REPLACING_SOURCES.has(source))
+  ) {
+    retireOtherSessions(sessionsDir, sessionId, record.claudePid);
+  }
 };
 
 try {

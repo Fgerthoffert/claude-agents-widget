@@ -286,7 +286,7 @@ body {
   background: var(--panel-press);
 }
 
-/* ---- Sections: running on top, waiting on the user below -------------------------------- */
+/* ---- Sections: running, then blocked on the user, then done ----------------------------- */
 
 .panel__groups {
   display: flex;

@@ -39,13 +39,25 @@ describe('describeSession', () => {
     expect(described.stateLabel).toBe('needs input');
   });
 
-  it('maps every known notification matcher', () => {
+  it('maps every known blocking notification matcher', () => {
     const reasonFor = (notificationType: string): string =>
       describeSession(session({ state: 'needs_input', notificationType, cwd: null }), HOME).detail;
 
     expect(reasonFor('permission_prompt')).toBe('needs permission');
-    expect(reasonFor('idle_prompt')).toBe('waiting for you');
     expect(reasonFor('agent_needs_input')).toBe('agent needs input');
+  });
+
+  it('gives an idle session no blocking reason', () => {
+    // `idle_prompt` is classified `done_idle` at the source now (ADR-0014), so it never reaches
+    // the reason line at all — and if a stale hook script still pairs it with `needs_input`,
+    // the generic wording is what shows.
+    const idle = describeSession(
+      session({ state: 'done_idle', notificationType: 'idle_prompt', cwd: null }),
+      HOME,
+    );
+
+    expect(idle.detail).toBe('');
+    expect(idle.stateLabel).toBe('done');
   });
 
   it('humanises an unknown notification matcher rather than dropping it', () => {

@@ -1,8 +1,17 @@
 import { sessionEmoji } from '../core/sessionEmoji';
 
+/**
+ * One entry per section, in the order the sections appear.
+ *
+ * Worded to distinguish the two *stopped* states, which is the only thing the headings above the
+ * rows leave ambiguous: ✋ is an agent that asked something and cannot go on until it is answered,
+ * ✅ is one that simply has nothing to do. "needs an answer" rather than the old "needs you",
+ * because needing you was exactly the claim that covered both (ADR-0014). Kept to three short
+ * labels: the legend is a key, and a key that needs reading twice is chrome.
+ */
 const states = [
-  { emoji: sessionEmoji('needs_input'), label: 'needs you' },
   { emoji: sessionEmoji('working'), label: 'working' },
+  { emoji: sessionEmoji('needs_input'), label: 'needs an answer' },
   { emoji: sessionEmoji('done_idle'), label: 'done' },
 ] as const;
 
