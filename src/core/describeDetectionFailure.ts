@@ -1,15 +1,12 @@
 import { describeError } from './describeError';
 
 /** The IO steps a detection sweep is made of, each able to fail on its own. */
-export type DetectionStage = 'startup' | 'watcher' | 'hooks' | 'scanner' | 'titles' | 'sweep';
+export type DetectionStage = 'startup' | 'agents' | 'sweep';
 
 /** Named after what the user loses when the step fails, not after the function that failed. */
 const WHAT_BROKE: Record<DetectionStage, string> = {
   startup: 'Starting detection failed',
-  watcher: 'Watching the hook state directory failed',
-  hooks: 'Reading the hook state files failed',
-  scanner: 'Scanning running Claude Code processes failed',
-  titles: 'Reading session transcripts failed',
+  agents: 'Asking Claude Code for its sessions failed',
   sweep: 'The detection sweep failed',
 };
 

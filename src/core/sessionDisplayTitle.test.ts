@@ -1,22 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
 import { sessionDisplayTitle } from './sessionDisplayTitle';
+import { aSession } from './testing/aSession';
 import type { Session } from './types';
 
-const session = (overrides: Partial<Session>): Session => ({
-  sessionId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
-  title: null,
-  cwd: null,
-  transcriptPath: null,
-  state: 'working',
-  source: 'hook',
-  notificationType: null,
-  notificationMessage: null,
-  updatedAt: '2026-09-09T12:00:00.000Z',
-  claudePid: 1234,
-  ancestors: [],
-  ...overrides,
-});
+const session = (overrides: Partial<Session>): Session =>
+  aSession({
+    sessionId: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    title: null,
+    cwd: null,
+    ...overrides,
+  });
 
 describe('sessionDisplayTitle', () => {
   it('prefers the session title', () => {

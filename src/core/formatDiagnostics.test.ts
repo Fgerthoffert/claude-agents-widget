@@ -5,15 +5,8 @@ import type { SetupState } from './evaluateSetupState';
 import type { DetectionHealth } from './types';
 
 const setup = (overrides: Partial<SetupState> = {}): SetupState => ({
-  hooks: {
-    status: 'done',
-    registeredEvents: ['SessionStart', 'Stop'],
-    missingEvents: [],
-    scriptInstalled: true,
-  },
   permissions: { status: 'unknown', lastFocus: null },
-  sessions: { status: 'done', total: 3, hookOwned: 2, scannerOnly: 1 },
-  needsSetup: false,
+  sessions: { total: 3, background: 1 },
   ...overrides,
 });
 
@@ -21,8 +14,6 @@ const dump = (state = setup(), health: DetectionHealth = { failure: null, degrad
   formatDiagnostics({
     appVersion: 'v0.1.0 (abc1234)',
     platform: 'macOS 26.3 (arm64)',
-    hookPath: '/Users/test/.claude-agents-widget/hook.mjs',
-    settingsPath: '/Users/test/.claude/settings.json',
     logPath: '/Users/test/Library/Logs/app/claude-agents-widget.log',
     setup: state,
     health,
@@ -35,9 +26,8 @@ describe('formatDiagnostics', () => {
 
     expect(text).toContain('app version     v0.1.0 (abc1234)');
     expect(text).toContain('macOS 26.3 (arm64)');
-    expect(text).toContain('/Users/test/.claude-agents-widget/hook.mjs');
-    expect(text).toContain('hook status     done');
-    expect(text).toContain('sessions        3 (2 via hooks, 1 via scanner)');
+    expect(text).toContain('source          claude agents --json');
+    expect(text).toContain('sessions        3 (1 background)');
   });
 
   it('names the log file, which is where the real error text lives', () => {
@@ -57,27 +47,23 @@ describe('formatDiagnostics', () => {
   // The whole point of ADR-0011: a report about an empty panel has to carry the reason.
   it('leads with a failing pipeline and names the reason', () => {
     const text = dump(setup(), {
-      failure: 'Watching the hook state directory failed: fs.watch not allowed',
+      failure: 'Asking Claude Code for its sessions failed: command not allowed',
       degraded: [],
     });
 
     expect(text).toContain('detection       FAILING');
-    expect(text).toContain('failure       Watching the hook state directory failed');
+    expect(text).toContain('failure       Asking Claude Code for its sessions failed');
   });
 
   it('lists every degraded step, one per line', () => {
     const text = dump(setup(), {
       failure: null,
-      degraded: ['Scanning running Claude Code processes failed: EPERM', 'Reading transcripts: x'],
+      degraded: ['Something was reduced: EPERM', 'And another thing: x'],
     });
 
     expect(text).toContain('detection       ok');
-    expect(text).toContain('degraded      Scanning running Claude Code processes failed: EPERM');
-    expect(text).toContain('degraded      Reading transcripts: x');
-  });
-
-  it('writes an em dash rather than an empty list', () => {
-    expect(dump()).toContain('missing       —');
+    expect(text).toContain('degraded      Something was reduced: EPERM');
+    expect(text).toContain('degraded      And another thing: x');
   });
 
   it('says plainly when no click has been made yet', () => {

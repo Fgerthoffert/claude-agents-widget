@@ -2,9 +2,9 @@ import { useCallback, useState } from 'react';
 
 import type { Session } from '../core/types';
 
-/** Session id -> the `updatedAt` the user was last shown, plus the recorder. */
+/** Session id -> the `stateSince` the user was last shown, plus the recorder. */
 export interface Acknowledged {
-  readonly seen: ReadonlyMap<string, string>;
+  readonly seen: ReadonlyMap<string, number>;
   readonly acknowledge: (session: Session) => void;
 }
 
@@ -21,13 +21,13 @@ export interface Acknowledged {
  * a session has left the store and might come back on the next sweep.
  */
 export const useAcknowledged = (): Acknowledged => {
-  const [seen, setSeen] = useState<ReadonlyMap<string, string>>(new Map());
+  const [seen, setSeen] = useState<ReadonlyMap<string, number>>(new Map());
 
   const acknowledge = useCallback((session: Session) => {
     setSeen((previous) =>
-      previous.get(session.sessionId) === session.updatedAt
+      previous.get(session.sessionId) === session.stateSince
         ? previous
-        : new Map(previous).set(session.sessionId, session.updatedAt),
+        : new Map(previous).set(session.sessionId, session.stateSince),
     );
   }, []);
 

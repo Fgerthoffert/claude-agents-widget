@@ -1,6 +1,6 @@
 # ADR-0003: Hybrid session detection — hooks primary, process/transcript scan as fallback
 
-- **Status**: Accepted
+- **Status**: Superseded by [ADR-0018](0018-claude-code-is-the-source-of-truth.md) — `claude agents --json` reports what both halves of this hybrid were reconstructing.
 - **Date**: 2026-09-09
 
 ## Context

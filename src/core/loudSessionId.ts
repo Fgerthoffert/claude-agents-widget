@@ -11,18 +11,18 @@ import type { Session } from './types';
  * The loud one is the **most recent** blocked session — store order already puts `needs_input`
  * first, most recently changed first, so it is simply the first one that is still unacknowledged.
  *
- * Acknowledgement is keyed to the event, not the session: `acknowledged` maps a session id to the
- * `updatedAt` the user was last shown. Clicking a row records the value it had at that moment, so
- * the row goes quiet — the user has seen it and clearly does not need it shouted at again. When
- * the agent then does something new, `updatedAt` moves on, the recorded value no longer matches,
- * and the row is loud again. That is the correct reading of "the user was aware of the thing":
- * they were aware of *that* thing, not of whatever happened next.
+ * Acknowledgement is keyed to the *state change*, not to the session: `acknowledged` maps a
+ * session id to the `stateSince` the user was last shown. Clicking a row records the value it had
+ * at that moment, so the row goes quiet — the user has seen it and clearly does not need it
+ * shouted at again. When the agent next changes state, `stateSince` moves on, the recorded value
+ * no longer matches, and the row is loud again. That is the correct reading of "the user was
+ * aware of the thing": they were aware of *that* thing, not of whatever happened next.
  */
 export const loudSessionId = (
   sessions: readonly Session[],
-  acknowledged: ReadonlyMap<string, string>,
+  acknowledged: ReadonlyMap<string, number>,
 ): string | null =>
   sessions.find(
     (session) =>
-      session.state === 'needs_input' && acknowledged.get(session.sessionId) !== session.updatedAt,
+      session.state === 'needs_input' && acknowledged.get(session.sessionId) !== session.stateSince,
   )?.sessionId ?? null;

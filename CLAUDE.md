@@ -3,15 +3,18 @@
 macOS menu bar icon + always-on-top floating panel showing every local Claude Code session, with
 one-click focusing of the terminal window that owns it. Tauri 2, TypeScript-first.
 
+Sessions come from `claude agents --json` — Claude Code's own answer about its own sessions
+(ADR-0018). The widget derives nothing about them except how long each state has held, and its
+one job that Agent View cannot do is raise the window a session already lives in.
+
 ## Architecture
 
 | Path             | Holds                                                                           |
 | ---------------- | ------------------------------------------------------------------------------- |
 | `src/core/`      | Pure TypeScript logic — no DOM, no Tauri, no `node:` imports. Logic lives here. |
-| `src/detection/` | Imperative shell: Tauri fs/shell calls, the 5s scan loop, the session store.    |
+| `src/detection/` | Imperative shell: the `claude agents --json` poll, the session store, logging.  |
 | `src/ui/`        | React components (one per file), presentation only.                             |
-| `hooks/`         | The Claude Code hook script, copied verbatim to `~/.claude-agents-widget/`.     |
-| `scripts/`       | Developer/user CLIs (the hook installer).                                       |
+| `scripts/`       | Developer CLIs (version check, release notes).                                  |
 | `src-tauri/`     | Thin Rust plumbing: tray, window, plugins — plus the NSPanel conversion (0010). |
 | `src/dev/`       | Browser preview harness for the panel. Never shipped.                           |
 | `docs/adr/`      | One Architecture Decision Record per significant decision.                      |
@@ -36,15 +39,15 @@ npm run tauri build -- --no-bundle # compile check without packaging
 npm run tauri build                # full .app + .dmg (aarch64 by default)
 npm run check-versions             # package.json / tauri.conf.json / Cargo.toml must agree
 npm run release-notes -- --tag v0.1.0  # print the notes a release would carry
-npm run install-hooks -- --dry-run # show what would be added to ~/.claude/settings.json
-npm run install-hooks              # install the hook (asks for confirmation; --yes to skip)
+npm run preview:ui                 # browser harness for the panel; #scene+glass+tall in the hash
 ```
 
-`install-hooks` writes to the **real** `~/.claude/settings.json`. Never run it to test a change —
-it merges idempotently and backs the file up first, but tests cover it against tmp dirs
-(`scripts/installHooks.test.ts`). Use `--dry-run` when in doubt. The same merge is available in the
-app itself (`src/detection/installHooksInApp.ts`), which is what a `.dmg` user gets; both share the
-pure `mergeHookSettings` and both validate the settings file before writing anything.
+There is nothing to install. The widget writes no files and reads none — its whole native surface
+is five allowlisted commands, asserted in `src/detection/detectionCapabilities.test.ts`. To see
+what it sees, run `claude agents --json` yourself.
+
+**Requires Claude Code with `claude agents --json`** (2.1.236 has it). An older CLI produces a
+named detection failure in the panel rather than an empty list (ADR-0011).
 
 ## Workflows
 
@@ -69,8 +72,9 @@ by commit SHA and every workflow has an explicit least-privilege `permissions:` 
 - PascalCase files for React components, camelCase for functions.
 - Tests colocated: `<name>.test.ts`. ≥85% coverage on `src/core` (CI gate). `src/detection` is
   the imperative shell and is not coverage-gated — keep judgement out of it and in `src/core`.
-- Test fixtures live in `src/core/__fixtures__/` as plain `.txt`/`.jsonl` files. They must be
-  **fully synthetic** (`/Users/test/…`): never commit real transcript text or real paths.
+- `src/core/testing/aSession.ts` is the shared `Session` factory for tests — use it rather than
+  writing another fixture. Anything synthetic must stay synthetic (`/Users/test/…`): never commit
+  a real path or a real session name.
 - No `console.log` — `console.warn`/`console.error` only.
 - Comments explain _why_, only where the code is not self-evident.
 

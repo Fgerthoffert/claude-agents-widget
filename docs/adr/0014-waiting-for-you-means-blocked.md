@@ -1,6 +1,6 @@
 # ADR-0014: "Waiting for you" means blocked, and a fresh session is idle
 
-- **Status**: Accepted
+- **Status**: Accepted; the state model stands, but its mechanism is superseded by [ADR-0018](0018-claude-code-is-the-source-of-truth.md) — `status` and `waitingFor` replace the event-folding this describes.
 - **Date**: 2026-09-09
 
 ## Context

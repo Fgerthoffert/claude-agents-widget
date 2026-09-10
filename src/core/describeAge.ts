@@ -14,15 +14,13 @@ export interface AgeDisplay {
 /**
  * Splits the age into the two questions the user actually asks.
  *
- * A working session's `updatedAt` is stamped when the current turn began, so its age is the
- * length of *this* processing run rather than the session's lifetime; every other state stamps
- * it when the agent stopped, so the same number reads as how long nothing has happened.
+ * The duration is `stateSince` — how long the session has been in the state it is in, which is
+ * not the same as how old it is (ADR-0018). For a working session that is the length of *this*
+ * run; for a stopped one it is how long nothing has happened.
  *
  * The two mean opposite things and must never be confused for one another, so they differ on
  * three channels at once: play against pause (shapes, not two similar clock faces), the working
  * accent colour against muted grey, and weight (ADR-0008).
- *
- * `null` for scanner-only sessions, whose timestamp is the sweep that found them.
  */
 export const describeAge = (session: Session, nowMs: number): AgeDisplay | null => {
   const text = formatTimeInState(session, nowMs);

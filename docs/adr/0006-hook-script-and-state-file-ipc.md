@@ -1,6 +1,6 @@
 # ADR-0006: Hook script design and state-file IPC
 
-- **Status**: Accepted
+- **Status**: Superseded by [ADR-0018](0018-claude-code-is-the-source-of-truth.md) — there is no hook script; Claude Code is asked directly.
 - **Date**: 2026-09-09
 
 ## Context

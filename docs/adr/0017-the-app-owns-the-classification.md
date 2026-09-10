@@ -1,6 +1,6 @@
 # ADR-0017: The app owns the classification, and refreshes its own hook
 
-- **Status**: Accepted
+- **Status**: Superseded by [ADR-0018](0018-claude-code-is-the-source-of-truth.md) — there is no hook script left to go stale.
 - **Date**: 2026-09-10
 
 ## Context

@@ -1,6 +1,6 @@
 # ADR-0009: Release strategy, signing posture, and the first-run consent model
 
-- **Status**: Accepted
+- **Status**: Accepted for the release strategy. The first-run/hook-installation half is superseded by [ADR-0018](0018-claude-code-is-the-source-of-truth.md) — there is nothing to install and nothing to consent to.
 - **Date**: 2026-09-09
 
 ## Context

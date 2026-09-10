@@ -27,7 +27,9 @@ highlights.
 
 - **macOS on Apple Silicon.** Release builds are `aarch64` only. Intel Macs can build from source
   (see [Development](#development)) — nothing in the code is Apple-Silicon specific.
-- Claude Code, for there to be anything to watch.
+- **Claude Code with `claude agents --json`** (2.1.236 or newer). That command is where every
+  session, name and state comes from (ADR-0018); with an older CLI the panel says so rather than
+  looking empty.
 
 ## Install
 
@@ -51,35 +53,19 @@ The app has no Dock icon: it lives in the menu bar.
 
 ## First run
 
-The panel opens on a three-step **Setup** view, which the tray's `Setup / Diagnostics` reopens at
-any time.
+**Nothing to install.** Sessions come from `claude agents --json`, so the widget works the moment
+you launch it (ADR-0018). The tray's `Setup / Diagnostics` has one step:
 
-1. **Install the Claude Code hooks** — one button. It copies the hook script to
-   `~/.claude-agents-widget/hook.mjs` and merges five entries (`SessionStart`, `UserPromptSubmit`,
-   `Stop`, `Notification`, `SessionEnd`) into `~/.claude/settings.json`. It **merges, never
-   overwrites**: your own hooks are left exactly as they are, a backup is written to
-   `settings.json.claude-agents-widget.bak` before the first change, and a `settings.json` that
-   cannot be parsed is refused rather than repaired. "Show the change" prints the exact JSON first
-   if you would rather read it than trust it.
-2. **Let macOS raise windows** — clicking a session runs a short AppleScript.
-   - **Automation** (Apple Events) is prompted for by macOS the first time you click a row. Allow
-     it, per app.
-   - **Accessibility** is separate, cannot be prompted for, and is what lets the widget walk VS
-     Code / Cursor windows to find the right one. Grant it by hand: the Setup view deep-links to
-     _System Settings → Privacy & Security → Accessibility_, where you tick **Claude Agents
-     Widget**.
-   - Both grants are attached to **that exact `.app` bundle**. Replacing the app — installing a new
-     release, or rebuilding it locally — invalidates them, and you have to grant them again. macOS
-     gives no warning when this happens; a click that used to land on the window will quietly start
-     landing on the app instead.
-   - Without Accessibility nothing breaks: a click still raises the owning application, just not
-     the specific window.
-3. **Restart running agents** — hooks only apply to sessions started afterwards. Sessions that were
-   already running still appear (the scanner finds them), but they cannot report `needs input`.
+**Let macOS raise windows.** Clicking a session runs a short AppleScript.
 
-The tray menu also holds `Show/Hide Panel`, `Launch at Login` (off by default) and `Quit`, and the
-Setup view has a **Copy diagnostics** button that puts versions, hook status and the last focus
-result on the clipboard for a bug report.
+- **Automation** (Apple Events) is prompted for by macOS the first time you click a row. Allow it.
+- **Accessibility** is separate, cannot be prompted for, and is what lets the widget find the
+  exact window. Grant it by hand: the Setup view deep-links to _System Settings → Privacy &
+  Security → Accessibility_, where you tick **Claude Agents Widget**. Without it a click still
+  raises the app, just not the right window — and the panel says so, with a button that takes you
+  to the pane.
+
+The grant is attached to the exact app bundle, so **every update means granting it again.**
 
 ## The panel
 
@@ -107,18 +93,24 @@ after a UI change is [docs/ui-smoke-checklist.md](docs/ui-smoke-checklist.md).
 
 ## How detection works
 
-Two independent sources, reconciled into one list
-([ADR-0003](docs/adr/0003-hybrid-session-detection.md)):
+One source: **`claude agents --json`**, Claude Code's own answer about its own sessions
+([ADR-0018](docs/adr/0018-claude-code-is-the-source-of-truth.md)). Polled every 3 seconds, it
+reports every interactive and background session with its working directory, its process id, its
+session name and its status — `busy`, `waiting` (with the reason: `permission prompt`,
+`input needed`, …) or `idle`. That is the whole of the state model.
 
-- **Hooks** (precise, ~1s): Claude Code runs `~/.claude-agents-widget/hook.mjs` on each session
-  event; it writes one small JSON file per session under `~/.claude-agents-widget/sessions/`, which
-  the app watches. This is the only path that can tell you an agent is _waiting for input_.
-  The hook is zero-dependency, never writes to stdout, always exits 0, and logs its own problems to
-  `~/.claude-agents-widget/hook.log` — it cannot break the session it runs in
-  ([ADR-0006](docs/adr/0006-hook-script-and-state-file-ipc.md)).
-- **Scanner** (zero-config, ~5s): a periodic `ps`/`lsof` sweep for `claude` processes plus the
-  mtime of `~/.claude/projects/*/*.jsonl` transcripts. It finds sessions that started before the
-  hooks were installed and notices when one dies.
+It is run through a login shell (`/bin/zsh -lc`), because `claude` lives wherever your package
+manager put it and a GUI app launched from Finder inherits none of those directories on its
+`PATH`. The arguments are fixed in the app's capability allowlist, so nothing is interpolated
+into a shell.
+
+The widget derives exactly one thing: how long each session has been in its current state.
+`startedAt` says how _old_ a session is, and a row needs to answer how long it has been _stuck_.
+
+Earlier versions worked all of this out from the outside — a hook script installed into your
+`~/.claude/settings.json`, a `ps`/`lsof` sweep, and the mtime of your transcripts — and nearly
+every bug this project has had was an artifact of that. ADR-0018 has the details, including what
+it cost.
 
 ### Click-to-focus
 
@@ -148,17 +140,13 @@ own files, never session titles or project directories.
 
 ## Uninstall
 
+The widget never writes to `~/.claude/` and stores nothing outside its own app-support
+directory, so there is nothing of yours to restore:
+
 ```sh
-# 1. Remove the hook entries from ~/.claude/settings.json.
-#    Restore the backup the installer made:
-mv ~/.claude/settings.json.claude-agents-widget.bak ~/.claude/settings.json
-#    …or edit the file and delete the five entries whose command mentions claude-agents-widget.
-
-# 2. Remove the widget's own data (hook script, per-session state, hook log).
-rm -rf ~/.claude-agents-widget
-
-# 3. Trash the app.
 rm -rf '/Applications/Claude Agents Widget.app'
+rm -rf ~/Library/Application\ Support/com.fgerthoffert.claude-agents-widget
+rm -rf ~/Library/Logs/com.fgerthoffert.claude-agents-widget
 ```
 
 Also revoke the Automation and Accessibility grants in _System Settings → Privacy & Security_, and
@@ -182,7 +170,6 @@ npm run preview:ui                 # the panel in a browser, with fake sessions
 | `npm run check-versions`                | package.json / tauri.conf.json / Cargo.toml agree          |
 | `npm run tauri build -- --no-bundle`    | Compile check without packaging                            |
 | `npm run tauri build`                   | Full `.app` + `.dmg` in `src-tauri/target/release/bundle/` |
-| `npm run install-hooks -- --dry-run`    | Preview the settings.json change                           |
 | `npm run release-notes -- --tag v0.1.0` | Print the release notes for a tag                          |
 
 Requires Rust stable and Xcode Command Line Tools (`xcode-select --install`). For an Intel or
@@ -190,12 +177,11 @@ universal build, pass `--target x86_64-apple-darwin` or `--target universal-appl
 
 ```
 src/core/      pure TypeScript logic — one exported function per file
-src/detection/ imperative shell: fs watcher, process scanner, session store, installer
+src/detection/ imperative shell: the `claude agents --json` poll, session store, logging
 src/ui/        React components
 src/dev/       browser preview harness (not shipped)
-hooks/         the Claude Code hook script (zero dependencies, shipped as an app resource)
-scripts/       developer CLIs (hook installer, version check, release notes)
-src-tauri/     thin Rust plumbing (tray, window, fs/shell plugins)
+scripts/       developer CLIs (version check, release notes)
+src-tauri/     thin Rust plumbing (tray, window, shell plugin)
 docs/adr/      architecture decision records
 .claude/PRPs/  product requirements and implementation plans
 ```
@@ -209,8 +195,8 @@ every merge to `main`, and publishes a release on every `v*` tag.
 This project owes a lot to **[claude-status](https://github.com/gmr/claude-status)** by
 [gmr](https://github.com/gmr) — a native Swift menu bar monitor and desktop widget for Claude Code
 sessions (BSD-3-Clause). It got there first, it solves the same problem, and it is where several of
-the mechanisms used here were shown to work at all: hook-driven session state, ancestor-process
-analysis to identify the owning app, per-app AppleScript for window focusing. Read its source if
+the mechanisms used here were shown to work at all: ancestor-process analysis to identify the
+owning app, and per-app AppleScript for window focusing. Read its source if
 this problem interests you.
 
 This exists as a separate thing because of three specific wants: an **always-on-top panel** that can

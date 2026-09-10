@@ -38,7 +38,9 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       include: ['src/core/**/*.ts'],
-      exclude: ['src/core/**/*.test.ts'],
+      // `testing/` is scaffolding that happens to live here; counting it would flatter the
+      // number it is measured by.
+      exclude: ['src/core/**/*.test.ts', 'src/core/testing/**'],
       thresholds: {
         lines: 85,
         functions: 85,

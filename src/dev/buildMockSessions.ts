@@ -9,19 +9,10 @@ interface Seed {
   readonly state: Session['state'];
   /** Seconds spent in the current state. */
   readonly ageSeconds: number;
-  readonly notificationType?: string;
-  readonly notificationMessage?: string;
-  readonly source?: Session['source'];
+  /** Claude Code's own phrase for why a blocked session is blocked. */
+  readonly waitingFor?: string;
+  readonly kind?: Session['kind'];
 }
-
-const vscode = '/Applications/Visual Studio Code.app/Contents/MacOS/Code';
-const iterm = '/Applications/iTerm.app/Contents/MacOS/iTerm2';
-
-const host = (app: string, path: string): Session['ancestors'] => [
-  { pid: 4321, comm: '/bin/zsh', args: '-zsh' },
-  { pid: 4300, comm: 'claude', args: `claude ${path}` },
-  { pid: 4100, comm: app, args: app },
-];
 
 const seeds: Readonly<Record<Exclude<MockScenario, 'empty'>, readonly Seed[]>> = {
   typical: [
@@ -30,8 +21,7 @@ const seeds: Readonly<Record<Exclude<MockScenario, 'empty'>, readonly Seed[]>> =
       cwd: '/Users/you/GitHub/storefront',
       state: 'needs_input',
       ageSeconds: 42,
-      notificationType: 'permission_prompt',
-      notificationMessage: 'Claude needs permission to run `npm run migrate`',
+      waitingFor: 'permission prompt',
     },
     {
       title: 'Migrate billing to Stripe v3',
@@ -50,7 +40,6 @@ const seeds: Readonly<Record<Exclude<MockScenario, 'empty'>, readonly Seed[]>> =
       cwd: '/Users/you/GitHub/infra-scripts',
       state: 'working',
       ageSeconds: 9,
-      source: 'scanner',
     },
     {
       title: 'Write ADR for event bus',
@@ -65,22 +54,21 @@ const seeds: Readonly<Record<Exclude<MockScenario, 'empty'>, readonly Seed[]>> =
       cwd: '/Users/you/GitHub/storefront',
       state: 'needs_input',
       ageSeconds: 128,
-      notificationType: 'permission_prompt',
-      notificationMessage: 'Claude needs permission to read production logs',
+      waitingFor: 'permission prompt',
     },
     {
       title: 'Rename UserService to AccountService across the monorepo',
       cwd: '/Users/you/GitHub/platform-monorepo/packages/accounts',
       state: 'needs_input',
       ageSeconds: 17,
-      notificationType: 'agent_needs_input',
+      waitingFor: 'agent needs input',
     },
     {
       title: 'Add OpenTelemetry spans',
       cwd: '/Users/you/GitHub/api-gateway',
       state: 'needs_input',
       ageSeconds: 903,
-      notificationType: 'agent_needs_input',
+      waitingFor: 'agent needs input',
     },
     {
       title: 'Port CI to reusable workflows',
@@ -111,7 +99,6 @@ const seeds: Readonly<Record<Exclude<MockScenario, 'empty'>, readonly Seed[]>> =
       cwd: '/Users/you/GitHub/infra-scripts',
       state: 'working',
       ageSeconds: 5,
-      source: 'scanner',
     },
     {
       title: 'Tune Postgres indexes',
@@ -152,8 +139,7 @@ const seeds: Readonly<Record<Exclude<MockScenario, 'empty'>, readonly Seed[]>> =
       cwd: '/Users/you/GitHub/storefront',
       state: 'needs_input',
       ageSeconds: 214,
-      notificationType: 'permission_prompt',
-      notificationMessage: 'Claude needs permission to run `git push --force-with-lease`',
+      waitingFor: 'permission prompt',
     },
   ],
 };
@@ -169,13 +155,11 @@ export const buildMockSessions = (scenario: MockScenario, nowMs: number): readon
     sessionId: `preview-${scenario}-${String(index)}`,
     title: seed.title,
     cwd: seed.cwd,
-    transcriptPath: `/Users/you/.claude/projects/encoded/preview-${String(index)}.jsonl`,
     state: seed.state,
-    source: seed.source ?? 'hook',
-    notificationType: seed.notificationType ?? null,
-    notificationMessage: seed.notificationMessage ?? null,
-    updatedAt: new Date(nowMs - seed.ageSeconds * 1000).toISOString(),
+    kind: seed.kind ?? 'interactive',
+    waitingFor: seed.waitingFor ?? null,
     claudePid: 4300 + index,
-    ancestors: host(index % 3 === 0 ? vscode : iterm, seed.cwd),
+    startedAtMs: nowMs - (seed.ageSeconds + 600) * 1000,
+    stateSince: nowMs - seed.ageSeconds * 1000,
   }));
 };

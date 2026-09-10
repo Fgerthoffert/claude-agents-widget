@@ -55,13 +55,9 @@ npm run tauri dev
 - [ ] It never covers the menu bar, and never grows off the bottom of the screen.
 - [ ] Shrink the panel to two agents, then open **Setup / Diagnostics**: the window grows to fit
       the whole guide rather than scrolling it in 190px. Press Done: it shrinks back.
-- [ ] In Setup, press **Show the change**: the window grows to fit the JSON. Hide it again: it
-      shrinks back. (Nothing outside the setup view knows that button exists — the height is
-      re-measured after every render, not from a list of things that might have changed.)
-- [ ] Press **Install hooks** and let it report: the window grows by the outcome line.
-- [ ] With everything already installed and a precise click on record, both steps collapse to a
-      heading and a chip — and the window **shrinks** to match. This is the case that catches a
-      measurement which can only grow (ADR-0015).
+- [ ] With a precise click on record, the one step collapses to a heading and a chip — and the
+      window **shrinks** to match. This is the case that catches a measurement which can only
+      grow (ADR-0015).
 - [ ] The exact-change preview never makes the window taller than the screen: it is capped at
       130px and scrolls inside itself.
 - [ ] Resize the width by dragging a side edge: the width sticks, and is still there after a
@@ -99,16 +95,20 @@ npm run tauri dev
 - [ ] Run two sessions in one terminal in turn (`/clear` between them): there is never more than
       one row for that terminal, even if `SessionEnd` never fires for the first.
 
-## A stale hook script (ADR-0017)
+## The session source (ADR-0018)
 
-- [ ] Overwrite `~/.claude-agents-widget/hook.mjs` with an older copy, relaunch the widget, and
-      check it: the file is back to the shipped version, and the log says
-      `hook script refreshed`.
-- [ ] Delete `~/.claude-agents-widget/hook.mjs` and relaunch: it is **not** recreated silently —
-      that is the not-installed case, and Setup asks for consent as usual.
-- [ ] With the old script in place _before_ it is refreshed, a session on an idle notification
-      still shows under **Done**, not Waiting for you: the app re-derives the state and does not
-      trust the script's opinion.
+- [ ] Run `claude agents --json` yourself. Every session it lists is a row in the panel, and
+      every row is in that list — no extras, no omissions.
+- [ ] Open Agent View (`claude agents`) and leave it running. The panel does **not** gain rows
+      for the supervisor, its `bg-pty-host` helpers or `claude agents` itself. (The old `ps`
+      scanner counted all of them: ten rows where there were four.)
+- [ ] Dispatch a background session from Agent View. It appears in the panel, and its row says
+      what it is doing.
+- [ ] Row titles are Claude Code's own session names, matching what Agent View shows.
+- [ ] Temporarily rename `claude` on your PATH and relaunch: the panel says detection is not
+      running and names the command, rather than showing an empty list.
+- [ ] Put it back: the next poll recovers on its own, with no restart.
+- [ ] `~/.claude/settings.json` is untouched, and `~/.claude-agents-widget/` is never created.
 
 ## Legibility at scale
 
@@ -134,10 +134,8 @@ npm run tauri dev
       what the terminal is actually asking. `waiting for you` is gone: an idle session is no
       longer `needs_input` at all (ADR-0014).
 - [ ] Ages count up once a second and are single-unit (`12s` → `59s` → `1m` → `4m`).
-- [ ] A scanner-discovered session (start a session, then `npm run install-hooks` was never run,
-      or kill the hook dir) shows no age rather than a fake one.
-- [ ] An ended session (close its terminal) disappears from the panel rather than lingering —
-      ADR-0008's revision overturned the original "dim it at the bottom" decision.
+- [ ] Every row shows an age, and it counts up rather than resetting each poll.
+- [ ] Close a session's terminal: its row disappears on the next poll.
 - [ ] Toggle macOS Appearance between Light and Dark: both are legible; nothing is grey-on-grey.
 - [ ] Park the panel over something bright and busy — a photo, a colourful web page. Titles, paths
       and the setup step numbers all stay readable through the glass.
@@ -190,53 +188,27 @@ npm run tauri dev
 - [ ] Log out and back in: the app starts, the panel appears where it was left.
 - [ ] Uncheck it → the plist is removed.
 
-## First run and setup (Phase 5)
+## Setup and diagnostics
 
-Needs a machine where the hooks are **not** installed. Do not test this by removing your real
-hooks: use a throwaway account, or move `~/.claude/settings.json` aside and put it back afterwards.
-
-- [ ] With no widget entries in `~/.claude/settings.json`, the panel opens on the **Setup** view,
-      not on the session list — and it does not flash the session list first.
-- [ ] Step 1 names `~/.claude/settings.json` and how many entries it will add, and offers its two
-      buttons without a paragraph in front of them.
-- [ ] **Show the change** prints the JSON that would be written, _and_ the reassurance that
-      existing hooks are kept and a backup is written first, and the events it will add; hiding it
-      again works (ADR-0013).
-- [ ] **Install hooks** → the button reads `Installing…`, then a sentence appears saying how many
-      events were registered and that running sessions need a restart.
-- [ ] `~/.claude-agents-widget/hook.mjs` exists and is byte-identical to `hooks/claude-agents-widget-hook.mjs`.
-- [ ] `~/.claude/settings.json.claude-agents-widget.bak` exists and is the **pre-install** file.
-- [ ] Any hooks you already had are still there, unmodified.
-- [ ] Pressing **Install hooks** again reports "already installed" and changes nothing.
-- [ ] With a deliberately corrupted `settings.json` (`echo '{' > …`), step 1 reads `blocked`, offers
-      no install button, and the file is left exactly as it was.
-- [ ] There are **two** numbered steps, not three. Session reporting is one line of status under
-      them, with no number and no chip.
-- [ ] Start a fresh Claude Code session: that status line switches to the "N of M sessions
-      reporting through the hooks" wording, and the row appears in the panel.
-- [ ] Once step 1 is `done` it collapses to its heading and chip — no body, no leftover blank box.
-      Same for step 2 once a precise click has proved the grant.
-- [ ] The **empty state** (no sessions, no hooks) shows an `Install hook` button — not a terminal
-      command. Once the hooks are in and nothing is running, it reads "No agents running right now".
-- [ ] Tray → `Setup / Diagnostics` reopens the view and reveals the panel if it was hidden.
+- [ ] The panel opens on the **session list**, never on Setup: there is nothing to install, so
+      there is no first run to interrupt (ADR-0018).
+- [ ] Tray → `Setup / Diagnostics` opens it and reveals the panel if it was hidden.
+- [ ] There is exactly **one** numbered step, and it is the macOS permission.
+- [ ] **Open Accessibility** and **Open Automation** each open the right System Settings pane.
+- [ ] With Accessibility **not** granted, click a row: it raises the app, and the step flips to
+      `blocked` naming `permission-denied`, and only then explains the app-bundle trap. Grant it,
+      click again: the step flips to `done` and collapses to its heading.
 - [ ] `Done` returns to the session list and stays there.
-- [ ] **Open Automation** and **Open Accessibility** each open the right System Settings pane.
-- [ ] With Accessibility **not** granted, click a row: it raises the app, and step 2 flips to
-      `blocked` naming `permission-denied`, and only then explains that the grant is tied to this
-      app bundle. Grant it, click again: step 2 flips to `done`.
-- [ ] A click that only reached its window via the folder-opening fallback leaves step 2 at
-      `unknown`, not `done` — that fallback needs no Accessibility grant, so it proves nothing
-      about one (ADR-0013).
-- [ ] **Copy diagnostics** puts a readable block on the clipboard containing the app version and
-      the hook status — and **no session titles or project paths**.
+- [ ] **Copy diagnostics** puts a readable block on the clipboard with the app version, the log
+      path and the session counts — and **no session titles or project paths**.
 
 ## Installed-app checks (a real `.dmg`)
 
 - [ ] The `.dmg` mounts, the app copies to `/Applications`.
 - [ ] A plain double-click is refused by Gatekeeper; right-click → **Open** → **Open** works, and so
       does `xattr -dr com.apple.quarantine`.
-- [ ] The installed app's Setup view can install the hooks — this is the path that proves
-      `bundle.resources` shipped the hook script (a failure here reports `hook-resource-missing`).
+- [ ] The installed app finds `claude` on its own: launched from Finder it lists sessions, which
+      proves the login-shell lookup works where a bare `PATH` would not (ADR-0018).
 - [ ] After replacing the app with a newer build, the Accessibility grant has to be given again —
       expected, and warned about in step 2.
 

@@ -2,18 +2,18 @@ import { formatDuration } from './formatDuration';
 import type { Session } from './types';
 
 /**
- * The right-aligned age on a panel row, or `null` when it would be a lie.
+ * The right-aligned age on a panel row.
  *
- * `updatedAt` is only a real state-transition timestamp on the hook path. The reconciler
- * stamps scanner-discovered sessions with the time of the sweep that saw them (ADR-0006), so
- * their age would reset every five seconds and always read a few seconds — worse than blank.
- * Those rows show no age until a hook event takes ownership of the session.
+ * `stateSince` is a real state-transition timestamp for every session, so unlike the old
+ * two-source pipeline there is no longer a class of row whose age would be a lie. Scanner-found
+ * sessions used to be stamped with the sweep that saw them, which reset every five seconds, so
+ * they showed nothing at all (ADR-0008); with Claude Code reporting the state and the widget
+ * timing the changes, every row can say how long (ADR-0018).
+ *
+ * `null` only for a clock that has gone backwards — a machine waking from sleep can hand us a
+ * `stateSince` in the future, and "-3s" is worse than blank.
  */
 export const formatTimeInState = (session: Session, nowMs: number): string | null => {
-  if (session.source !== 'hook') return null;
-
-  const updatedMs = Date.parse(session.updatedAt);
-  if (Number.isNaN(updatedMs)) return null;
-
-  return formatDuration(nowMs - updatedMs);
+  const elapsed = nowMs - session.stateSince;
+  return elapsed < 0 ? null : formatDuration(elapsed);
 };

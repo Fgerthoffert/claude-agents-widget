@@ -7,12 +7,18 @@ import { parseProcessAncestors } from './parseProcessAncestors';
 import { parseTtyDevice } from './parseTtyDevice';
 import type { FocusFailure, FocusHost, FocusResult, FocusRunner } from './types';
 
-/** Hook sessions carry their chain; scanner sessions have none and must be walked live. */
+/**
+ * Walks the session's process chain live, from the pid Claude Code reported.
+ *
+ * The hook script used to capture this chain at session start and store it, so this was a
+ * fallback for sessions the hook had never seen. There is no hook now (ADR-0018), and reading
+ * `ps` at click time is better anyway: a chain captured hours ago describes where the session
+ * *was*, and the window it belongs to is a question about now.
+ */
 const resolveAncestors = async (
   session: Session,
   run: FocusRunner,
 ): Promise<readonly Ancestor[]> => {
-  if (session.ancestors.length > 0) return session.ancestors;
   if (session.claudePid === null) return [];
 
   const outcome = await run('ps', ['-axo', 'pid=,ppid=,command=']);

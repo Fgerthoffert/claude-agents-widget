@@ -8,8 +8,6 @@ import type { DetectionHealth } from '../core/types';
 
 interface CopyDiagnosticsInput {
   readonly setup: SetupState;
-  readonly hookPath: string;
-  readonly settingsPath: string;
   readonly health: DetectionHealth;
 }
 
@@ -35,8 +33,6 @@ export const copyDiagnostics = async (input: CopyDiagnosticsInput): Promise<bool
   const text = formatDiagnostics({
     appVersion,
     platform: typeof navigator === 'undefined' ? 'unknown' : navigator.userAgent,
-    hookPath: input.hookPath,
-    settingsPath: input.settingsPath,
     logPath: (await appLogPath()) ?? 'unknown',
     setup: input.setup,
     health: input.health,

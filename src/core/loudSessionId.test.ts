@@ -1,32 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import { loudSessionId } from './loudSessionId';
+import { aSession } from './testing/aSession';
 import type { Session, SessionState } from './types';
 
-const session = (
-  sessionId: string,
-  state: SessionState,
-  updatedAt = '2026-09-09T12:00:00.000Z',
-): Session => ({
-  sessionId,
-  title: sessionId,
-  cwd: '/Users/test/proj',
-  transcriptPath: null,
-  state,
-  source: 'hook',
-  notificationType: null,
-  notificationMessage: null,
-  updatedAt,
-  claudePid: 411,
-  ancestors: [],
-});
+const NOW = Date.parse('2026-09-10T12:00:00.000Z');
+
+const session = (sessionId: string, state: SessionState, stateSince = NOW): Session =>
+  aSession({ sessionId, title: sessionId, state, stateSince });
 
 describe('loudSessionId', () => {
   it('shouts about the first blocked session, which is the most recent', () => {
-    const sessions = [
-      session('newest', 'needs_input', '2026-09-09T12:00:00.000Z'),
-      session('older', 'needs_input', '2026-09-09T11:00:00.000Z'),
-    ];
+    const sessions = [session('newest', 'needs_input', NOW), session('older', 'needs_input', NOW)];
     expect(loudSessionId(sessions, new Map())).toBe('newest');
   });
 
@@ -39,22 +24,22 @@ describe('loudSessionId', () => {
 
   it('goes quiet once the user has been to that session', () => {
     const sessions = [session('seen', 'needs_input'), session('unseen', 'needs_input')];
-    const acknowledged = new Map([['seen', '2026-09-09T12:00:00.000Z']]);
+    const acknowledged = new Map([['seen', NOW]]);
     expect(loudSessionId(sessions, acknowledged)).toBe('unseen');
   });
 
-  it('shouts again when the same session does something new', () => {
-    // The user saw the 12:00 prompt; this is the 12:05 one, which they have not.
-    const acknowledged = new Map([['a', '2026-09-09T12:00:00.000Z']]);
-    const sessions = [session('a', 'needs_input', '2026-09-09T12:05:00.000Z')];
+  it('shouts again when the same session changes state again', () => {
+    // The user saw the state that began five minutes ago; this session has moved on since.
+    const acknowledged = new Map([['a', NOW - 300_000]]);
+    const sessions = [session('a', 'needs_input', NOW)];
     expect(loudSessionId(sessions, acknowledged)).toBe('a');
   });
 
   it('stays silent when every blocked session has been seen', () => {
     const sessions = [session('a', 'needs_input'), session('b', 'needs_input')];
     const acknowledged = new Map([
-      ['a', '2026-09-09T12:00:00.000Z'],
-      ['b', '2026-09-09T12:00:00.000Z'],
+      ['a', NOW],
+      ['b', NOW],
     ]);
     expect(loudSessionId(sessions, acknowledged)).toBeNull();
   });

@@ -1,21 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { groupSessions } from './groupSessions';
+import { aSession } from './testing/aSession';
 import type { Session, SessionState } from './types';
 
-const session = (sessionId: string, state: SessionState): Session => ({
-  sessionId,
-  title: sessionId,
-  cwd: '/Users/test/code/api',
-  transcriptPath: null,
-  state,
-  source: 'hook',
-  notificationType: null,
-  notificationMessage: null,
-  updatedAt: '2026-09-09T12:00:00.000Z',
-  claudePid: 1,
-  ancestors: [],
-});
+const session = (sessionId: string, state: SessionState): Session =>
+  aSession({ sessionId, title: sessionId, state });
 
 describe('groupSessions', () => {
   it('splits running, blocked and finished into three sections', () => {

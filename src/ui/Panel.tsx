@@ -20,7 +20,6 @@ import { useAcknowledged } from './useAcknowledged';
 import { useAppVersion } from './useAppVersion';
 import { useAutoPanelHeight } from './useAutoPanelHeight';
 import { useHomeDir } from './useHomeDir';
-import { useHookScriptRefresh } from './useHookScriptRefresh';
 import { useLogPath } from './useLogPath';
 import { useNowMs } from './useNowMs';
 import { usePanelSettings } from './usePanelSettings';
@@ -55,9 +54,9 @@ import './panel.css';
  * first is in flight, and anything short of "the exact window came forward" is said out loud in
  * a notice rather than left for the user to guess at.
  *
- * The panel is also where setup lives. It opens on the setup view by itself when the hooks are
- * not installed, because until they are there is nothing else for it to show; the tray's
- * "Setup / Diagnostics" reopens it at any time (ADR-0009).
+ * The panel is also where setup lives, reached from the tray. It no longer opens there by
+ * itself: that existed because nothing worked until a hook was installed, and there is nothing
+ * to install now (ADR-0018).
  *
  * It can be dragged from anywhere: `data-tauri-drag-region` handles its own background (Tauri
  * matches the attribute on the element under the cursor, not on its ancestors), and
@@ -72,7 +71,6 @@ export const Panel = () => {
   const logPath = useLogPath();
   const [lastFocus, setLastFocus] = useState<LastFocusOutcome | null>(null);
   const [showSetup, setShowSetup] = useState(false);
-  const [setupDismissed, setSetupDismissed] = useState(false);
   const [pendingSessionId, setPendingSessionId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const { seen, acknowledge } = useAcknowledged();
@@ -82,7 +80,6 @@ export const Panel = () => {
   // otherwise queue another AppleScript behind it and land the user somewhere twice.
   const inFlight = useRef(false);
 
-  useHookScriptRefresh();
   usePersistedPanelFrame(settings.autoHeight, settingsReady);
   const { onMouseDown, consumeDrag } = useWindowDragOnMove();
 
@@ -140,17 +137,11 @@ export const Panel = () => {
 
   const handleCloseSetup = useCallback(() => {
     setShowSetup(false);
-    setSetupDismissed(true);
   }, []);
 
   const handleCopyDiagnostics = useCallback(() => {
-    void copyDiagnostics({
-      setup: setup.setup,
-      hookPath: setup.hookPath,
-      settingsPath: setup.settingsPath,
-      health,
-    });
-  }, [setup.setup, setup.hookPath, setup.settingsPath, health]);
+    void copyDiagnostics({ setup, health });
+  }, [setup, health]);
 
   const handleOpenPane = useCallback((pane: 'automation' | 'accessibility') => {
     void openSystemSettings(pane);
@@ -168,8 +159,9 @@ export const Panel = () => {
 
   const empty =
     groups.running.length === 0 && groups.waiting.length === 0 && groups.done.length === 0;
-  // Auto-open only once the probe has really run, so the placeholder state never flashes it up.
-  const setupOpen = showSetup || (setup.ready && setup.setup.needsSetup && !setupDismissed);
+  // Only ever opened on request. There is nothing to install any more, so there is no first-run
+  // state the panel has to interrupt with (ADR-0018) — the tray's Setup / Diagnostics is the way in.
+  const setupOpen = showSetup;
 
   const { panelRef } = useAutoPanelHeight(settings.autoHeight && settingsReady);
 
@@ -178,16 +170,10 @@ export const Panel = () => {
       <PanelHeader onHide={handleHide} />
       {setupOpen ? (
         <SetupView
-          setup={setup.setup}
+          setup={setup}
           health={health}
           buildIdentity={buildIdentity}
           logPath={logPath}
-          hookPath={setup.hookPath}
-          settingsPath={setup.settingsPath}
-          preview={setup.preview}
-          busy={setup.busy}
-          outcome={setup.outcome}
-          onInstall={setup.install}
           onOpenPane={handleOpenPane}
           onCopyDiagnostics={handleCopyDiagnostics}
           onClose={handleCloseSetup}
@@ -197,14 +183,7 @@ export const Panel = () => {
       ) : (
         <>
           {empty ? (
-            <EmptyState
-              hooksInstalled={setup.setup.hooks.status === 'done'}
-              failure={health.failure}
-              busy={setup.busy}
-              outcome={setup.outcome}
-              onInstall={setup.install}
-              onOpenSetup={openSetup}
-            />
+            <EmptyState failure={health.failure} onOpenSetup={openSetup} />
           ) : (
             <div className="panel__groups" data-tauri-drag-region>
               {groups.running.length > 0 && (
