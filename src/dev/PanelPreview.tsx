@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { describeAge } from '../core/describeAge';
 import { groupSessions } from '../core/groupSessions';
@@ -10,6 +10,7 @@ import { PanelLegend } from '../ui/PanelLegend';
 import { PanelNotice } from '../ui/PanelNotice';
 import { SessionGroup } from '../ui/SessionGroup';
 import { SetupView } from '../ui/SetupView';
+import { measurePanelContentHeight } from '../ui/measurePanelContentHeight';
 import { useAcknowledged } from '../ui/useAcknowledged';
 import { useNowMs } from '../ui/useNowMs';
 import { buildMockSessions } from './buildMockSessions';
@@ -19,7 +20,7 @@ import '../ui/panel.css';
 import './preview.css';
 
 /** `setup` is not a session list, so it lives beside `MockScenario` rather than inside it. */
-type PreviewScene = MockScenario | 'setup';
+type PreviewScene = MockScenario | 'setup' | 'setup-done';
 
 const scenes: readonly { readonly id: PreviewScene; readonly label: string }[] = [
   { id: 'typical', label: 'Typical (6)' },
@@ -28,6 +29,7 @@ const scenes: readonly { readonly id: PreviewScene; readonly label: string }[] =
   { id: 'blocked', label: 'One blocked' },
   { id: 'empty', label: 'Empty' },
   { id: 'setup', label: 'Setup' },
+  { id: 'setup-done', label: 'Setup (done)' },
 ];
 
 const isScene = (value: string): value is PreviewScene =>
@@ -65,7 +67,7 @@ const writeHash = (route: PreviewRoute): void => {
 const home = '/Users/you';
 
 /** A half-finished install: hooks partly registered, permissions unproven, sessions unhooked. */
-const setupState = {
+const setupTodo = {
   hooks: {
     status: 'todo' as const,
     registeredEvents: ['Stop'],
@@ -75,6 +77,34 @@ const setupState = {
   permissions: { status: 'unknown' as const, lastFocus: null },
   sessions: { status: 'todo' as const, total: 9, hookOwned: 0, scannerOnly: 9 },
   needsSetup: true,
+};
+
+/**
+ * Everything done, so both steps collapse to a heading and a chip.
+ *
+ * This is the short-content case, and the one that catches an auto-height measurement that can
+ * only grow: `.setup__scroll` both stretches and scrolls, so a naive `scrollHeight` reports the
+ * window's height rather than the content's whenever the content is the shorter of the two.
+ */
+const setupDone = {
+  hooks: {
+    status: 'done' as const,
+    registeredEvents: ['SessionStart', 'UserPromptSubmit', 'Stop', 'Notification', 'SessionEnd'],
+    missingEvents: [],
+    scriptInstalled: true,
+  },
+  permissions: {
+    status: 'done' as const,
+    lastFocus: {
+      ok: true,
+      method: 'window' as const,
+      permissionDenied: false,
+      degraded: false,
+      detail: 'window',
+    },
+  },
+  sessions: { status: 'done' as const, total: 9, hookOwned: 9, scannerOnly: 0 },
+  needsSetup: false,
 };
 
 /** What the row's ancestor chain says about where it runs, for the simulated focus log. */
@@ -100,6 +130,8 @@ const hostAppName = (session: Session): string => {
 export const PanelPreview = () => {
   const [route, setRoute] = useState<PreviewRoute>(routeFromHash);
   const { scene, glass, tall } = route;
+  const [autoHeight, setAutoHeight] = useState(true);
+  const frames = useRef<(HTMLDivElement | null)[]>([]);
   const [lastAction, setLastAction] = useState(
     'Click a row: the real panel would focus that session’s window.',
   );
@@ -107,9 +139,10 @@ export const PanelPreview = () => {
 
   // Ages are anchored to mount, not to every tick, so rows visibly age as you watch them.
   const [mountedMs] = useState(nowMs);
+  const isSetup = scene === 'setup' || scene === 'setup-done';
   const sessions = useMemo(
-    () => (scene === 'setup' ? [] : buildMockSessions(scene, mountedMs)),
-    [scene, mountedMs],
+    () => (isSetup ? [] : buildMockSessions(scene, mountedMs)),
+    [isSetup, scene, mountedMs],
   );
   const { seen, acknowledge } = useAcknowledged();
   const groups = groupSessions(sessions);
@@ -132,6 +165,20 @@ export const PanelPreview = () => {
     go({ scene: id });
   };
 
+  // The real thing resizes the window (`useAutoPanelHeight`); here the frame stands in for it,
+  // running the same `measurePanelContentHeight` against the same layout. It is the only way to
+  // see auto-height, and to check the measurement, without launching the native shell.
+  useEffect(() => {
+    for (const frame of frames.current) {
+      if (frame === null) continue;
+      const panel = frame.querySelector<HTMLElement>('.panel');
+      frame.style.height =
+        autoHeight && panel !== null ? `${String(measurePanelContentHeight(panel))}px` : '';
+    }
+    // No dependency list, matching `useAutoPanelHeight`: the height also depends on state inside
+    // SetupView that nothing out here can see, so the only correct trigger is "after any commit".
+  });
+
   const onSelect = (session: Session) => {
     acknowledge(session);
     setLastAction(
@@ -139,8 +186,11 @@ export const PanelPreview = () => {
     );
   };
 
-  const panel = (theme: 'light' | 'dark') => (
+  const panel = (theme: 'light' | 'dark', index: number) => (
     <div
+      ref={(node) => {
+        frames.current[index] = node;
+      }}
       // `data-theme` is what panel.css keys its palette off, so the frame gets the real tokens
       // rather than a copy of them.
       data-theme={theme}
@@ -160,9 +210,9 @@ export const PanelPreview = () => {
             );
           }}
         />
-        {scene === 'setup' ? (
+        {isSetup ? (
           <SetupView
-            setup={setupState}
+            setup={scene === 'setup-done' ? setupDone : setupTodo}
             health={{ failure: null, degraded: [] }}
             buildIdentity="v0.2.2 (a1b2c3d)"
             logPath="/Users/you/Library/Logs/claude-agents-widget/app.log"
@@ -183,6 +233,8 @@ export const PanelPreview = () => {
             onClose={() => {
               selectScene('typical');
             }}
+            autoHeight={autoHeight}
+            onAutoHeightChange={setAutoHeight}
           />
         ) : groups.running.length === 0 &&
           groups.waiting.length === 0 &&
@@ -235,7 +287,7 @@ export const PanelPreview = () => {
             )}
           </div>
         )}
-        {scene !== 'setup' && (
+        {!isSetup && (
           <>
             <PanelNotice
               message={
@@ -287,6 +339,15 @@ export const PanelPreview = () => {
         </button>
         <button
           type="button"
+          className={`preview__button${autoHeight ? ' preview__button--active' : ''}`}
+          onClick={() => {
+            setAutoHeight((previous) => !previous);
+          }}
+        >
+          {autoHeight ? 'Auto height' : 'Fixed height'}
+        </button>
+        <button
+          type="button"
           className={`preview__button${glass ? ' preview__button--active' : ''}`}
           onClick={() => {
             go({ glass: !glass });
@@ -299,11 +360,11 @@ export const PanelPreview = () => {
       <div className="preview__stage">
         <div className="preview__slot">
           <span className="preview__label">Light</span>
-          {panel('light')}
+          {panel('light', 0)}
         </div>
         <div className="preview__slot">
           <span className="preview__label">Dark</span>
-          {panel('dark')}
+          {panel('dark', 1)}
         </div>
       </div>
 

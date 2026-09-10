@@ -93,6 +93,10 @@ been in its current state. A legend at the bottom explains the glyphs.
   one you have not been to — with a tint and a slow pulse (suppressed under
   `prefers-reduced-motion`). Going to a session calms it until that agent does something new.
 
+By default the window **fits its own height** to what it is showing — 190px for two agents, tall
+enough for a dozen without scrolling, never taller than your screen. Turn it off under **Panel**
+in Setup to set the height yourself. The width is always yours.
+
 The panel floats above all windows on every space, is dragged by its background or header, and
 remembers its position and size across restarts — clamped back onto an attached display if the
 monitor you left it on is gone. The `✕` and the tray's `Show/Hide Panel` are the same gesture.

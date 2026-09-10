@@ -23,6 +23,7 @@ const handlers = () => ({
   onOpenPane: vi.fn(),
   onCopyDiagnostics: vi.fn(),
   onClose: vi.fn(),
+  onAutoHeightChange: vi.fn(),
 });
 
 const renderView = (setup = state(), extra: Partial<Parameters<typeof SetupView>[0]> = {}) => {
@@ -38,6 +39,7 @@ const renderView = (setup = state(), extra: Partial<Parameters<typeof SetupView>
       preview={'{\n  "hooks": {}\n}'}
       busy={false}
       outcome={null}
+      autoHeight
       {...spies}
       {...extra}
     />,
@@ -224,6 +226,26 @@ describe('SetupView', () => {
     renderView();
 
     expect(screen.getByText('v0.2.1 (abc1234)')).toHaveClass('setup__build');
+  });
+
+  it('offers the auto-height preference, and says what turning it off gets you', async () => {
+    const user = userEvent.setup();
+    const spies = renderView();
+    const toggle = screen.getByRole('checkbox', { name: /Fit the height to the agents/ });
+
+    expect(toggle).toBeChecked();
+    expect(screen.getByText(/grows and shrinks with the list/)).toBeInTheDocument();
+
+    await user.click(toggle);
+
+    expect(spies.onAutoHeightChange).toHaveBeenCalledExactlyOnceWith(false);
+  });
+
+  it('explains how to resize once auto-height is off', () => {
+    renderView(state(), { autoHeight: false });
+
+    expect(screen.getByRole('checkbox', { name: /Fit the height/ })).not.toBeChecked();
+    expect(screen.getByText(/Drag its bottom edge/)).toBeInTheDocument();
   });
 
   it('offers the diagnostics dump and a way out', async () => {

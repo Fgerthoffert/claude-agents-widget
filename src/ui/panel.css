@@ -838,6 +838,58 @@ body {
   color: var(--panel-faint);
 }
 
+/* ---- Preferences: the part of this view that is not a checklist ------------------------- */
+
+.setup__prefs {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 13px;
+  padding-top: 10px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.setup__prefs-title {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 640;
+  text-transform: uppercase;
+  letter-spacing: 0.075em;
+  color: var(--panel-faint);
+}
+
+.setup__toggle {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+/* The system control, at the size the rest of this panel is drawn at. `accent-color` gets the
+   platform's own tick and its dark-mode treatment for free, which is a better blue than one
+   drawn by hand. */
+.setup__checkbox {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  margin: 1px 0 0;
+  accent-color: var(--state-working);
+  cursor: pointer;
+}
+
+.setup__toggle-body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.setup__toggle-label {
+  font-size: 10.5px;
+  font-weight: 550;
+  line-height: 1.35;
+}
+
 .setup__actions {
   display: flex;
   flex-wrap: wrap;
