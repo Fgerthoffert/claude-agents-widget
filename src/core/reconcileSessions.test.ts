@@ -1,17 +1,29 @@
 import { describe, expect, it } from 'vitest';
 
 import { reconcileSessions } from './reconcileSessions';
-import type { ReconcileInput, ScannedSession, SessionRecord } from './types';
+import type { ReconcileInput, ScannedSession, SessionRecord, SessionState } from './types';
 
 const NOW = Date.parse('2026-09-09T12:00:00.000Z');
 const at = (offsetMs: number) => new Date(NOW + offsetMs).toISOString();
+
+/**
+ * The event that produces each state, so a fixture asking for a state gets a record that could
+ * actually have been written. The reconciler re-derives state from `lastEvent` (ADR-0017), so a
+ * record claiming `needs_input` after a `Stop` is not a case worth testing — it cannot happen.
+ */
+const eventFor: Readonly<Record<SessionState, string>> = {
+  working: 'UserPromptSubmit',
+  needs_input: 'Notification',
+  done_idle: 'Stop',
+  ended: 'SessionEnd',
+};
 
 const record = (overrides: Partial<SessionRecord> = {}): SessionRecord => ({
   sessionId: 'sess-1',
   cwd: '/Users/test/proj',
   transcriptPath: '/Users/test/.claude/projects/-Users-test-proj/sess-1.jsonl',
   state: 'working',
-  lastEvent: 'UserPromptSubmit',
+  lastEvent: eventFor[overrides.state ?? 'working'],
   notificationType: null,
   notificationMessage: null,
   endReason: null,
@@ -67,6 +79,44 @@ describe('reconcileSessions', () => {
       'Detection core',
     );
     expect(run({ hookRecords: [record()], livePids: [411] })[0]?.title).toBeNull();
+  });
+
+  it("re-reads an old hook script's idle notification as done, not as blocked", () => {
+    // The bug this fixes, exactly as found on a real machine: a hook installed before the
+    // classification changed writes `needs_input` for `idle_prompt`, and the app believed it —
+    // so "Claude is waiting for your input", which blocks nothing, sat in Waiting for you.
+    const stale = record({
+      state: 'needs_input',
+      lastEvent: 'Notification',
+      notificationType: 'idle_prompt',
+      notificationMessage: 'Claude is waiting for your input',
+    });
+
+    expect(run({ hookRecords: [stale], livePids: [411] })[0]?.state).toBe('done_idle');
+  });
+
+  it("re-reads an old hook script's SessionStart as idle, not as working", () => {
+    const stale = record({ state: 'working', lastEvent: 'SessionStart' });
+
+    expect(run({ hookRecords: [stale], livePids: [411] })[0]?.state).toBe('done_idle');
+  });
+
+  it('still reports a real question as blocked', () => {
+    const blocked = record({
+      state: 'needs_input',
+      lastEvent: 'Notification',
+      notificationType: 'permission_prompt',
+    });
+
+    expect(run({ hookRecords: [blocked], livePids: [411] })[0]?.state).toBe('needs_input');
+  });
+
+  it('keeps the written state for an event it does not recognise', () => {
+    // A future hook registering something new must not have its records blanked by an app that
+    // has never heard of the event.
+    const future = record({ state: 'needs_input', lastEvent: 'PreCompact' });
+
+    expect(run({ hookRecords: [future], livePids: [411] })[0]?.state).toBe('needs_input');
   });
 
   it('lets the hook state win over what the scanner would infer', () => {

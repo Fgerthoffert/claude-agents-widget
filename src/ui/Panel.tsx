@@ -20,6 +20,7 @@ import { useAcknowledged } from './useAcknowledged';
 import { useAppVersion } from './useAppVersion';
 import { useAutoPanelHeight } from './useAutoPanelHeight';
 import { useHomeDir } from './useHomeDir';
+import { useHookScriptRefresh } from './useHookScriptRefresh';
 import { useLogPath } from './useLogPath';
 import { useNowMs } from './useNowMs';
 import { usePanelSettings } from './usePanelSettings';
@@ -81,6 +82,7 @@ export const Panel = () => {
   // otherwise queue another AppleScript behind it and land the user somewhere twice.
   const inFlight = useRef(false);
 
+  useHookScriptRefresh();
   usePersistedPanelFrame(settings.autoHeight, settingsReady);
   const { onMouseDown, consumeDrag } = useWindowDragOnMove();
 
