@@ -26,8 +26,14 @@ const eventStates = new Map<string, SessionState>([
 ]);
 
 /**
- * The PRD state model, keyed by hook event name. Mirrors the table in the hook script; kept
- * here too so the app can re-derive state from `lastEvent` without re-reading the hook.
+ * The PRD state model, keyed by hook event name, and the authority on what an event *means*.
+ *
+ * `reconcileSessions` calls this for every hook record rather than trusting the `state` the hook
+ * wrote (ADR-0017). The installed hook script is only rewritten by the installer, so it can be
+ * older than the app reading its records — which is how idle notifications went on showing as
+ * "waiting for you" for two releases after that was fixed. The hook reports the event; this
+ * decides what it means. The table below must stay a faithful mirror of `EVENT_STATE` in
+ * `hooks/claude-agents-widget-hook.mjs`, and when they differ this one wins.
  * Unregistered events return null, meaning "leave the state alone".
  *
  * `notificationType` only matters for `Notification`, where it decides whether the agent is

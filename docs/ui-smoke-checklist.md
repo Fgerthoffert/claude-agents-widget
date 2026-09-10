@@ -99,6 +99,17 @@ npm run tauri dev
 - [ ] Run two sessions in one terminal in turn (`/clear` between them): there is never more than
       one row for that terminal, even if `SessionEnd` never fires for the first.
 
+## A stale hook script (ADR-0017)
+
+- [ ] Overwrite `~/.claude-agents-widget/hook.mjs` with an older copy, relaunch the widget, and
+      check it: the file is back to the shipped version, and the log says
+      `hook script refreshed`.
+- [ ] Delete `~/.claude-agents-widget/hook.mjs` and relaunch: it is **not** recreated silently —
+      that is the not-installed case, and Setup asks for consent as usual.
+- [ ] With the old script in place _before_ it is refreshed, a session on an idle notification
+      still shows under **Done**, not Waiting for you: the app re-derives the state and does not
+      trust the script's opinion.
+
 ## Legibility at scale
 
 - [ ] Ten concurrent sessions: every row shows a **name**, not a path or an id. Scroll works, the

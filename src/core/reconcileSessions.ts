@@ -1,4 +1,5 @@
 import { isDesktopSession } from './isDesktopSession';
+import { mapHookEventToState } from './mapHookEventToState';
 import type { ReconcileInput, Session, SessionRecord, ScannedSession, SessionState } from './types';
 
 /** An `ended` session stays visible this long, so a finished agent does not vanish mid-glance. */
@@ -78,10 +79,18 @@ const newestByPid = (records: readonly SessionRecord[]): ReadonlyMap<number, str
 /**
  * Folds the two detection sources into the single ordered session list the UI renders.
  *
- * Precedence (ADR-0003): a hook record's state always wins, because hooks are told what
+ * Precedence (ADR-0003): a hook record's *event* always wins, because hooks are told what
  * happened while the scanner only infers it. The scanner therefore does exactly three things:
  * add sessions the hook path never saw, expire hook records whose `claude` process is gone,
  * and — by omission — let dead scanner-only sessions disappear.
+ *
+ * The event wins; the hook's *reading* of it does not. State is re-derived here from
+ * `lastEvent` and `notificationType` through `mapHookEventToState`, so what an event means is
+ * decided by the app rather than by the version of the hook script sitting in the user's home
+ * directory. That directory is only rewritten when the installer runs, so before this every
+ * classification fix shipped in an app update was invisible to anyone who did not think to
+ * press *Install hooks* again — which is how two sessions sat in "Waiting for you" saying
+ * `Claude is waiting for your input`, an idle nag that blocks nothing (ADR-0017).
  *
  * One row per process, both ways round (ADR-0012): a record superseded inside its own process is
  * treated as `ended`, and a scanned process whose PID a hook record already claims contributes
@@ -114,7 +123,12 @@ export const reconcileSessions = (input: ReconcileInput): readonly Session[] => 
       !scannedIds.has(record.sessionId);
     const superseded =
       record.claudePid !== null && currentByPid.get(record.claudePid) !== record.sessionId;
-    const state: SessionState = dead || superseded ? 'ended' : record.state;
+    // Re-derived from the event, not read from the file. The classification belongs to the app,
+    // which ships with it, rather than to whatever hook script happens to be installed — see
+    // ADR-0017. A record whose `lastEvent` is not one of the five we register keeps whatever
+    // state it was written with.
+    const reported = mapHookEventToState(record.lastEvent, record.notificationType) ?? record.state;
+    const state: SessionState = dead || superseded ? 'ended' : reported;
 
     if (state === 'ended' && nowMs - Date.parse(record.updatedAt) > ENDED_TTL_MS) return [];
     return [fromRecord(record, state, title)];
