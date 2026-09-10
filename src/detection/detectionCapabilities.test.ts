@@ -48,6 +48,9 @@ const allowed = (identifier: string): readonly AllowEntry[] => {
   return found.allow ?? [];
 };
 
+const allowsPath = (identifier: string, wanted: string): boolean =>
+  allowed(identifier).some((entry) => entry.path === wanted);
+
 const command = (name: string): AllowEntry | undefined =>
   allowed('shell:allow-execute').find((entry) => entry.name === name);
 
@@ -91,9 +94,30 @@ describe('detection capabilities', () => {
 
   it('no longer grants what the old detection pipeline needed', () => {
     // Deleting code is not enough; the grants have to go too, or the app keeps permissions it
-    // has no use for. The widget now reads no files and writes none: no transcripts, no
-    // settings.json, no hook script, no watcher (ADR-0018).
+    // has no use for. The widget reads no files and writes none (ADR-0018).
     expect(command('lsof-cwd')).toBeUndefined();
-    expect(permissions.some((entry) => JSON.stringify(entry).includes('fs:'))).toBe(false);
+    const fsGrants = permissions
+      .map((entry) => (typeof entry === 'string' ? entry : entry.identifier))
+      .filter((identifier) => identifier.startsWith('fs:'));
+
+    expect(fsGrants.sort()).toEqual(['fs:allow-unwatch', 'fs:allow-watch']);
+  });
+
+  it('grants a watch on the project tree, and nothing more than a watch', () => {
+    // The doorbell (ADR-0020): it says "something happened", and cannot read a byte to find out
+    // what — which is the property that keeps ADR-0018 true.
+    expect(allowsPath('fs:allow-watch', '$HOME/.claude/projects')).toBe(true);
+    expect(allowsPath('fs:allow-watch', '$HOME/.claude/projects/**')).toBe(true);
+    expect(permissions).toContain('fs:allow-unwatch');
+    for (const readOrWrite of [
+      'fs:allow-read-text-file',
+      'fs:allow-read-dir',
+      'fs:allow-write-text-file',
+      'fs:allow-stat',
+      'fs:allow-exists',
+      'fs:default',
+    ]) {
+      expect(permissions.some((entry) => JSON.stringify(entry).includes(readOrWrite))).toBe(false);
+    }
   });
 });

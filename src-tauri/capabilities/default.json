@@ -18,6 +18,21 @@
     "core:app:allow-version",
     "log:default",
     {
+      "identifier": "fs:allow-watch",
+      "allow": [
+        {
+          "path": "$HOME/.claude/projects"
+        },
+        {
+          "path": "$HOME/.claude/projects/*"
+        },
+        {
+          "path": "$HOME/.claude/projects/**"
+        }
+      ]
+    },
+    "fs:allow-unwatch",
+    {
       "identifier": "shell:allow-execute",
       "allow": [
         {
