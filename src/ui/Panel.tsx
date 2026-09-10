@@ -158,6 +158,10 @@ export const Panel = () => {
     setNotice(null);
   }, []);
 
+  const handleOpenAccessibility = useCallback(() => {
+    void openSystemSettings('accessibility');
+  }, []);
+
   const loud = useMemo(() => loudSessionId(sessions, seen), [sessions, seen]);
 
   const empty =
@@ -233,7 +237,13 @@ export const Panel = () => {
               )}
             </div>
           )}
-          <PanelNotice message={notice} onDismiss={handleDismissNotice} />
+          <PanelNotice
+            message={notice}
+            onGrantAccess={
+              lastFocus?.permissionDenied === true ? handleOpenAccessibility : undefined
+            }
+            onDismiss={handleDismissNotice}
+          />
           <PanelLegend />
         </>
       )}

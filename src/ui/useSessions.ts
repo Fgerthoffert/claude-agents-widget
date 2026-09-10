@@ -2,7 +2,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 
 import { describeDetectionFailure } from '../core/describeDetectionFailure';
 import { createSessionStore } from '../detection/createSessionStore';
-import { logDetection } from '../detection/logDetection';
+import { logToApp } from '../detection/logToApp';
 import { startDetection } from '../detection/startDetection';
 import type { DetectionHealth, Session } from '../core/types';
 
@@ -35,7 +35,7 @@ export const useSessions = (): SessionsView => {
       })
       .catch((error: unknown) => {
         const failure = describeDetectionFailure('startup', error);
-        void logDetection('error', failure);
+        void logToApp('error', failure);
         store.setHealth({ failure, degraded: [] });
       });
 

@@ -11,9 +11,13 @@ export type LogLevel = 'info' | 'warn' | 'error';
  * (ADR-0011).
  *
  * The plugin is imported lazily and its failure is swallowed on purpose: the browser preview and
- * jsdom have no native layer, and logging must never be the thing that breaks detection.
+ * jsdom have no native layer, and logging must never be the thing that breaks what it reports on.
+ *
+ * Named for the log rather than for detection because the focus engine writes here too: a click
+ * that could not reach its window used to leave no trace at all, which made a real bug report
+ * ("it opens a new VS Code window") a matter of reading code and guessing (ADR-0016).
  */
-export const logDetection = async (level: LogLevel, message: string): Promise<void> => {
+export const logToApp = async (level: LogLevel, message: string): Promise<void> => {
   if (level === 'error') console.error(message);
   else if (level === 'warn') console.warn(message);
 

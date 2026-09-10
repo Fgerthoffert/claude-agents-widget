@@ -1,4 +1,5 @@
 import { focusSession } from '../detection/focusSession';
+import { logToApp } from '../detection/logToApp';
 import type { LastFocusOutcome } from '../core/evaluateSetupState';
 import type { Session } from '../core/types';
 
@@ -19,6 +20,26 @@ import type { Session } from '../core/types';
 export const onSessionClick = async (session: Session): Promise<LastFocusOutcome> => {
   try {
     const result = await focusSession(session);
+
+    // Every click leaves a line in the app log. It did not before, and the first real report
+    // against the focus engine — "clicking it opens a new VS Code window" — had to be diagnosed
+    // by reading the code and reasoning about which branch could possibly do that, because there
+    // was no record of what had actually happened. ADR-0011's rule applied here too late
+    // (ADR-0016). The session id is a UUID; nothing here logs a title.
+    const id = session.sessionId.slice(0, 8);
+    if (result.ok) {
+      void logToApp(
+        result.degradedFrom === null ? 'info' : 'warn',
+        `focus ${id}: ${result.host} → ${result.method}` +
+          (result.degradedFrom === null ? '' : ` (degraded from ${result.degradedFrom})`),
+      );
+    } else {
+      void logToApp(
+        'warn',
+        `focus ${id}: ${result.host} failed — ${result.reason}${result.detail === null ? '' : `: ${result.detail}`}`,
+      );
+    }
+
     return result.ok
       ? {
           ok: true,
@@ -35,7 +56,7 @@ export const onSessionClick = async (session: Session): Promise<LastFocusOutcome
           detail: result.reason,
         };
   } catch (error: unknown) {
-    console.error('focusSession threw for', session.sessionId, error);
+    void logToApp('error', `focus ${session.sessionId.slice(0, 8)}: threw — ${String(error)}`);
     return {
       ok: false,
       method: null,

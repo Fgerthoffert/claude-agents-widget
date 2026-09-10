@@ -12,19 +12,33 @@ const WARP = hostFor('/Applications/Warp.app/Contents/MacOS/stable');
 const UNKNOWN = hostFor('/bin/zsh');
 
 describe('buildFocusPlan', () => {
-  it('tries the exact window, then the folder open, then plain activation for VS Code', () => {
+  it('tries the exact window, then plain activation, for VS Code', () => {
     const plan = buildFocusPlan({ host: VSCODE, cwd: '/Users/test/proj', ttyDevice: null });
     expect(plan.map((step) => [step.command, step.method, step.degraded])).toEqual([
       ['osascript', 'window', false],
-      ['open-bundle-path', 'window', true],
       ['open-bundle', 'app', true],
     ]);
   });
 
-  it('passes the cwd to the folder-open step, which needs no Accessibility consent', () => {
+  it('never passes a path to `open`, for any host', () => {
+    // `open -b <id> <cwd>` lands on the window holding that folder — and opens a *new* one when
+    // the folder is not itself a window root, which is the bug ADR-0016 is about. No step may
+    // carry a path, because no step can tell those two outcomes apart.
+    const hosts = [VSCODE, TERMINAL];
+
+    for (const host of hosts) {
+      const plan = buildFocusPlan({ host, cwd: '/Users/test/my proj', ttyDevice: '/dev/ttys003' });
+
+      for (const step of plan) {
+        expect(step.args).not.toContain('/Users/test/my proj');
+      }
+    }
+  });
+
+  it('activates by bundle id alone, which needs no consent at all', () => {
     const plan = buildFocusPlan({ host: VSCODE, cwd: '/Users/test/my proj', ttyDevice: null });
-    expect(plan[1]?.args).toEqual(['-b', 'com.microsoft.VSCode', '/Users/test/my proj']);
-    expect(plan[1]?.success).toBe('exit');
+    expect(plan.at(-1)?.args).toEqual(['-b', 'com.microsoft.VSCode']);
+    expect(plan.at(-1)?.success).toBe('exit');
   });
 
   it('never asks a terminal to open a path, which would spawn a new window', () => {

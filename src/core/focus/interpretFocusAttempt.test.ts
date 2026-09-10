@@ -8,7 +8,6 @@ const SCRIPT_STEP: FocusStep = {
   args: ['-e', '-- claude-agents-widget focus'],
   method: 'window',
   degraded: false,
-  mayCreateWindow: false,
   success: 'marker',
 };
 
@@ -17,7 +16,6 @@ const APP_STEP: FocusStep = {
   args: ['-b', 'com.microsoft.VSCode'],
   method: 'app',
   degraded: true,
-  mayCreateWindow: false,
   success: 'exit',
 };
 

@@ -16,7 +16,8 @@ into **Running** (the agent is busy, nothing is expected of you), **Waiting for 
 something and cannot go on until you answer) and **Done** (it stopped, and is not blocked).
 
 Clicking a row raises the terminal or editor window that agent lives in, and says so if it could
-not. However many agents are blocked, exactly one row is ever loud — the most recent one you have
+not — it will never open a new window instead (ADR-0016). If macOS refused the click, the notice
+offers the one-click fix. However many agents are blocked, exactly one row is ever loud — the most recent one you have
 not been to yet — so the panel always has one answer to "what next" instead of a wall of
 highlights.
 
