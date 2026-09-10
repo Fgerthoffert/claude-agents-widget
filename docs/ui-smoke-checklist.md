@@ -79,6 +79,22 @@ npm run tauri dev
 - [ ] Park it deliberately hanging off the bottom edge (about a third visible), quit, relaunch:
       that position is preserved (still ≥60% visible is left alone).
 
+## Snappiness (ADR-0020)
+
+- [ ] `/clear` a session with nothing else running: the row changes in well under a second. If it
+      takes ~3s the watcher is not firing.
+- [ ] Same again with two or three agents mid-run: it still lands inside ~2s. (This is the case a
+      pure trailing debounce would have broken — writes never stop, so it would never fire.)
+- [ ] Finish a turn and watch the row leave **Running**: about as fast.
+- [ ] Kill a session's terminal outright: the row goes within ~5s rather than instantly. That one
+      writes no transcript, so only the heartbeat can catch it.
+- [ ] Leave the machine completely idle for a few minutes with the widget open. It should be
+      close to invisible in Activity Monitor — one short `claude` process every 5s, nothing more.
+- [ ] With several agents working, the widget's CPU rises and then falls back when they finish.
+      That is the intended shape; a flat high number is not.
+- [ ] `chmod 000 ~/.claude/projects` (then put it back): Setup reports a degraded sweep naming
+      the watch, and the panel still updates on the heartbeat.
+
 ## Settled sessions (ADR-0019)
 
 - [ ] `/clear` a session and leave it: its row moves to **Idle**, dimmed, showing the project
