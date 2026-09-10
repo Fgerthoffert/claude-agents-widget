@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { describeAge } from '../core/describeAge';
 import { groupSessions } from '../core/groupSessions';
@@ -10,6 +10,7 @@ import { PanelLegend } from '../ui/PanelLegend';
 import { PanelNotice } from '../ui/PanelNotice';
 import { SessionGroup } from '../ui/SessionGroup';
 import { SetupView } from '../ui/SetupView';
+import { measurePanelContentHeight } from '../ui/measurePanelContentHeight';
 import { useAcknowledged } from '../ui/useAcknowledged';
 import { useNowMs } from '../ui/useNowMs';
 import { buildMockSessions } from './buildMockSessions';
@@ -100,6 +101,8 @@ const hostAppName = (session: Session): string => {
 export const PanelPreview = () => {
   const [route, setRoute] = useState<PreviewRoute>(routeFromHash);
   const { scene, glass, tall } = route;
+  const [autoHeight, setAutoHeight] = useState(true);
+  const frames = useRef<(HTMLDivElement | null)[]>([]);
   const [lastAction, setLastAction] = useState(
     'Click a row: the real panel would focus that session’s window.',
   );
@@ -132,6 +135,18 @@ export const PanelPreview = () => {
     go({ scene: id });
   };
 
+  // The real thing resizes the window (`useAutoPanelHeight`); here the frame stands in for it,
+  // running the same `measurePanelContentHeight` against the same layout. It is the only way to
+  // see auto-height, and to check the measurement, without launching the native shell.
+  useEffect(() => {
+    for (const frame of frames.current) {
+      if (frame === null) continue;
+      const panel = frame.querySelector<HTMLElement>('.panel');
+      frame.style.height =
+        autoHeight && panel !== null ? `${String(measurePanelContentHeight(panel))}px` : '';
+    }
+  }, [autoHeight, scene, tall, glass, sessions, seen]);
+
   const onSelect = (session: Session) => {
     acknowledge(session);
     setLastAction(
@@ -139,8 +154,11 @@ export const PanelPreview = () => {
     );
   };
 
-  const panel = (theme: 'light' | 'dark') => (
+  const panel = (theme: 'light' | 'dark', index: number) => (
     <div
+      ref={(node) => {
+        frames.current[index] = node;
+      }}
       // `data-theme` is what panel.css keys its palette off, so the frame gets the real tokens
       // rather than a copy of them.
       data-theme={theme}
@@ -183,6 +201,8 @@ export const PanelPreview = () => {
             onClose={() => {
               selectScene('typical');
             }}
+            autoHeight={autoHeight}
+            onAutoHeightChange={setAutoHeight}
           />
         ) : groups.running.length === 0 &&
           groups.waiting.length === 0 &&
@@ -287,6 +307,15 @@ export const PanelPreview = () => {
         </button>
         <button
           type="button"
+          className={`preview__button${autoHeight ? ' preview__button--active' : ''}`}
+          onClick={() => {
+            setAutoHeight((previous) => !previous);
+          }}
+        >
+          {autoHeight ? 'Auto height' : 'Fixed height'}
+        </button>
+        <button
+          type="button"
           className={`preview__button${glass ? ' preview__button--active' : ''}`}
           onClick={() => {
             go({ glass: !glass });
@@ -299,11 +328,11 @@ export const PanelPreview = () => {
       <div className="preview__stage">
         <div className="preview__slot">
           <span className="preview__label">Light</span>
-          {panel('light')}
+          {panel('light', 0)}
         </div>
         <div className="preview__slot">
           <span className="preview__label">Dark</span>
-          {panel('dark')}
+          {panel('dark', 1)}
         </div>
       </div>
 

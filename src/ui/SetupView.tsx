@@ -23,6 +23,9 @@ interface SetupViewProps {
   readonly onOpenPane: (pane: SystemSettingsPane) => void;
   readonly onCopyDiagnostics: () => void;
   readonly onClose: () => void;
+  /** Whether the window fits its own height to the number of agents (ADR-0015). */
+  readonly autoHeight: boolean;
+  readonly onAutoHeightChange: (on: boolean) => void;
 }
 
 const plural = (count: number, one: string, many: string): string => (count === 1 ? one : many);
@@ -46,6 +49,11 @@ const plural = (count: number, one: string, many: string): string => (count === 
  * Nothing here claims a permission is granted unless a real click proved it: macOS does not
  * expose the Accessibility grant to the app that needs it, and a green tick on faith would be
  * worse than an honest "unknown".
+ *
+ * The preferences below the checklist are the one part of this view that is not about getting
+ * set up, and they sit here because it is the panel's only screen with room for a sentence of
+ * explanation. There is exactly one so far, and it says what turning it off gets you rather than
+ * only what it does (ADR-0015).
  */
 export const SetupView = ({
   setup,
@@ -61,6 +69,8 @@ export const SetupView = ({
   onOpenPane,
   onCopyDiagnostics,
   onClose,
+  autoHeight,
+  onAutoHeightChange,
 }: SetupViewProps) => {
   const [showChange, setShowChange] = useState(false);
   const { hooks, permissions, sessions } = setup;
@@ -185,6 +195,27 @@ export const SetupView = ({
               ? `${String(sessions.total)} ${plural(sessions.total, 'session', 'sessions')} found by the process scanner, none reporting through the hooks — restart them for precise states.`
               : 'No agents running right now.'}
         </p>
+        <section className="setup__prefs" aria-label="Preferences">
+          <h2 className="setup__prefs-title">Panel</h2>
+          <label className="setup__toggle">
+            <input
+              type="checkbox"
+              className="setup__checkbox"
+              checked={autoHeight}
+              onChange={(event) => {
+                onAutoHeightChange(event.target.checked);
+              }}
+            />
+            <span className="setup__toggle-body">
+              <span className="setup__toggle-label">Fit the height to the agents</span>
+              <span className="setup__muted">
+                {autoHeight
+                  ? 'The window grows and shrinks with the list, up to the height of your screen. Turn this off to set the height yourself.'
+                  : 'The window keeps the height you give it. Drag its bottom edge to resize.'}
+              </span>
+            </span>
+          </label>
+        </section>
       </div>
 
       <footer className="setup__footer">

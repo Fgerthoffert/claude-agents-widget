@@ -1,17 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { clampWindowPosition } from '../core/clampWindowPosition';
 import { parseWindowFrame } from '../core/parseWindowFrame';
+import { FRAME_KEY, SAVE_DEBOUNCE_MS, loadPanelStore } from './panelStore';
 import { isTauri } from './isTauri';
 import type { ScreenRect } from '../core/clampWindowPosition';
 import type { Monitor } from '@tauri-apps/api/window';
-
-/** Written to the app config dir, so the panel comes back where the user left it. */
-const STORE_FILE = 'panel.json';
-const FRAME_KEY = 'frame';
-
-/** A drag emits a move event per frame; only the resting position is worth writing. */
-const SAVE_DEBOUNCE_MS = 500;
 
 /**
  * Monitor *work areas*, primary first, in physical pixels.
@@ -45,20 +39,34 @@ const workAreas = (primary: Monitor | null, monitors: readonly Monitor[]): Scree
  * is gone, and an undecorated always-on-top window placed off-screen cannot be recovered by
  * hand.
  *
+ * With `autoHeight` on, the saved **height** is deliberately not restored — `useAutoPanelHeight`
+ * is about to compute one, and restoring first would show the previous session's height for a
+ * frame before it was replaced (ADR-0015). Width and position are restored either way. The
+ * height still gets *saved*, so turning the setting off leaves the panel where auto-height last
+ * put it rather than jumping back to a size from days ago.
+ *
+ * Runs once the settings are loaded, not on mount: `autoHeight` decides what this does, and the
+ * store answers a tick or two late.
+ *
  * Everything here is best-effort — a failure must never stop the panel from rendering.
  */
-export const usePersistedPanelFrame = (): void => {
+export const usePersistedPanelFrame = (autoHeight: boolean, ready: boolean): void => {
+  // Read at restore time rather than captured, so this effect does not re-run — and re-restore
+  // the saved position over a window the user has since moved — every time the setting changes.
+  const autoHeightRef = useRef(autoHeight);
+  autoHeightRef.current = autoHeight;
+
   useEffect(() => {
-    if (!isTauri()) return;
+    if (!isTauri() || !ready) return;
 
     let unlisten: (() => void)[] = [];
     let timer: ReturnType<typeof setTimeout> | null = null;
     let cancelled = false;
 
     const run = async (): Promise<void> => {
-      const [windowApi, { load }] = await Promise.all([
+      const [windowApi, store] = await Promise.all([
         import('@tauri-apps/api/window'),
-        import('@tauri-apps/plugin-store'),
+        loadPanelStore(),
       ]);
       const {
         getCurrentWindow,
@@ -69,17 +77,21 @@ export const usePersistedPanelFrame = (): void => {
       } = windowApi;
 
       const panel = getCurrentWindow();
-      const store = await load(STORE_FILE, { autoSave: SAVE_DEBOUNCE_MS });
       const saved = parseWindowFrame(await store.get(FRAME_KEY));
 
       if (saved !== null && !cancelled) {
-        const [primary, monitors] = await Promise.all([primaryMonitor(), availableMonitors()]);
+        const [primary, monitors, current] = await Promise.all([
+          primaryMonitor(),
+          availableMonitors(),
+          panel.outerSize(),
+        ]);
         const target = clampWindowPosition({
           frame: saved,
           monitors: workAreas(primary, monitors),
         });
 
-        await panel.setSize(new PhysicalSize(saved.width, saved.height));
+        const height = autoHeightRef.current ? current.height : saved.height;
+        await panel.setSize(new PhysicalSize(saved.width, height));
         await panel.setPosition(new PhysicalPosition(target?.x ?? saved.x, target?.y ?? saved.y));
       }
 
@@ -115,5 +127,5 @@ export const usePersistedPanelFrame = (): void => {
       if (timer !== null) clearTimeout(timer);
       for (const stop of unlisten) stop();
     };
-  }, []);
+  }, [ready]);
 };

@@ -43,6 +43,26 @@ npm run tauri dev
       no flicker, no snapping back.
 - [ ] Resize from a corner; rows reflow, titles truncate, no horizontal scrollbar appears.
 
+## Auto height (ADR-0015)
+
+- [ ] With two agents the window is short and tightly fitted: no dead space under the last row,
+      nothing clipped, the legend flush to the bottom.
+- [ ] Start a third: the window grows by exactly one row's worth. End one: it shrinks back.
+- [ ] With a dozen agents nothing scrolls — the window is as tall as the list, and no row is
+      half-visible at the bottom of a section.
+- [ ] Fill the panel past the height of the display: it stops growing a little short of the work
+      area, stays fully on screen, and the sections scroll from there.
+- [ ] It never covers the menu bar, and never grows off the bottom of the screen.
+- [ ] Shrink the panel to two agents, then open **Setup / Diagnostics**: the window grows to fit
+      the whole guide rather than scrolling it in 190px. Press Done: it shrinks back.
+- [ ] Resize the width by dragging a side edge: the width sticks, and is still there after a
+      restart. Auto height only ever touches the height.
+- [ ] Turn **Fit the height to the agents** off in Setup. Drag the bottom edge, quit, relaunch:
+      the height you chose comes back.
+- [ ] Turn it back on: the window fits itself again on the next change.
+- [ ] On a Retina display the height is right, not half or double — the measurement is in CSS
+      pixels and the window wants physical ones.
+
 ## Position persistence
 
 - [ ] Park the panel somewhere non-default, quit from the tray, relaunch: it comes back in the
