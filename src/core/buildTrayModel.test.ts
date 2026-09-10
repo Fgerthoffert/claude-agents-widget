@@ -1,21 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildTrayModel } from './buildTrayModel';
+import { aSession } from './testing/aSession';
 import type { Session, SessionState } from './types';
 
-const session = (sessionId: string, state: SessionState, title: string | null): Session => ({
-  sessionId,
-  title,
-  cwd: '/Users/test/code/api',
-  transcriptPath: null,
-  state,
-  source: 'hook',
-  notificationType: null,
-  notificationMessage: null,
-  updatedAt: '2026-09-09T12:00:00.000Z',
-  claudePid: 1234,
-  ancestors: [],
-});
+const session = (sessionId: string, state: SessionState, title: string | null): Session =>
+  aSession({ sessionId, title, state });
 
 describe('buildTrayModel', () => {
   it('marks the menu bar, without a count, when something is waiting', () => {

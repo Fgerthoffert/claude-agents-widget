@@ -6,8 +6,6 @@ export interface DiagnosticsInput {
   readonly appVersion: string;
   /** `navigator.userAgent`, or whatever the shell can cheaply say about the platform. */
   readonly platform: string;
-  readonly hookPath: string;
-  readonly settingsPath: string;
   /** Where the app log lives, so a bug report can be asked for it. */
   readonly logPath: string;
   readonly setup: SetupState;
@@ -16,8 +14,6 @@ export interface DiagnosticsInput {
   /** ISO-8601, passed in so this function stays pure and testable. */
   readonly generatedAt: string;
 }
-
-const list = (values: readonly string[]): string => (values.length === 0 ? '—' : values.join(', '));
 
 /**
  * A block the user can paste into a bug report.
@@ -44,15 +40,10 @@ export const formatDiagnostics = (input: DiagnosticsInput): string => {
       ? []
       : input.health.degraded.map((reason) => `  degraded      ${reason}`)),
     '',
-    `settings file   ${input.settingsPath}`,
-    `hook script     ${input.hookPath}`,
     `log file        ${input.logPath}`,
-    `hook status     ${setup.hooks.status}`,
-    `  script        ${setup.hooks.scriptInstalled ? 'installed' : 'missing'}`,
-    `  registered    ${list(setup.hooks.registeredEvents)}`,
-    `  missing       ${list(setup.hooks.missingEvents)}`,
+    `source          claude agents --json`,
     '',
-    `sessions        ${String(setup.sessions.total)} (${String(setup.sessions.hookOwned)} via hooks, ${String(setup.sessions.scannerOnly)} via scanner)`,
+    `sessions        ${String(setup.sessions.total)} (${String(setup.sessions.background)} background)`,
     `permissions     ${setup.permissions.status}`,
     `last focus      ${
       focus === null

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Panel } from './Panel';
 import { startWindowDrag } from './startWindowDrag';
+import { aSession } from '../core/testing/aSession';
 import type { Session } from '../core/types';
 
 const mocks = vi.hoisted(() => ({
@@ -21,21 +22,11 @@ vi.mock('./onSessionClick', () => ({ onSessionClick: mocks.onSessionClick }));
 vi.mock('./togglePanelVisibility', () => ({ togglePanelVisibility: mocks.togglePanelVisibility }));
 vi.mock('./startWindowDrag', () => ({ startWindowDrag: vi.fn(() => Promise.resolve()) }));
 
-const NOW = Date.parse('2026-09-09T12:00:00.000Z');
+/** Fixtures age against the real clock, because `useNowMs` reads it. */
+const NOW = Date.now();
 
-const session = (overrides: Partial<Session> & { readonly sessionId: string }): Session => ({
-  title: null,
-  cwd: '/Users/test/code/api',
-  transcriptPath: null,
-  state: 'working',
-  source: 'hook',
-  notificationType: null,
-  notificationMessage: null,
-  updatedAt: new Date(NOW).toISOString(),
-  claudePid: 1234,
-  ancestors: [],
-  ...overrides,
-});
+const session = (overrides: Partial<Session> & { readonly sessionId: string }): Session =>
+  aSession({ title: null, stateSince: NOW - 1_000, ...overrides });
 
 const renderPanel = (sessions: readonly Session[], failure: string | null = null): void => {
   mocks.sessions.current = [...sessions];
@@ -102,14 +93,14 @@ describe('Panel', () => {
         sessionId: 'a',
         title: 'Newest',
         state: 'needs_input',
-        notificationType: 'permission_prompt',
-        updatedAt: new Date(NOW - 1_000).toISOString(),
+        waitingFor: 'permission prompt',
+        stateSince: NOW - 1_000,
       }),
       session({
         sessionId: 'b',
         title: 'Older',
         state: 'needs_input',
-        updatedAt: new Date(NOW - 60_000).toISOString(),
+        stateSince: NOW - 60_000,
       }),
       session({ sessionId: 'c', title: 'Busy' }),
     ]);
@@ -123,7 +114,7 @@ describe('Panel', () => {
     expect(rowByName(/^Newest/)).toHaveClass('row--loud');
     expect(rowByName(/^Older/)).not.toHaveClass('row--loud');
     expect(rowByName(/^Newest/)).toHaveAttribute('data-state', 'needs_input');
-    expect(screen.getByText('needs permission · /Users/test/code/api')).toBeInTheDocument();
+    expect(screen.getByText('permission prompt · /Users/test/code/api')).toBeInTheDocument();
   });
 
   it('stops shouting about a session once the user has been to it', async () => {
@@ -133,13 +124,14 @@ describe('Panel', () => {
         sessionId: 'a',
         title: 'Newest',
         state: 'needs_input',
-        updatedAt: new Date(NOW - 1_000).toISOString(),
+        waitingFor: 'permission prompt',
+        stateSince: NOW - 1_000,
       }),
       session({
         sessionId: 'b',
         title: 'Older',
         state: 'needs_input',
-        updatedAt: new Date(NOW - 60_000).toISOString(),
+        stateSince: NOW - 60_000,
       }),
     ]);
 
@@ -154,16 +146,16 @@ describe('Panel', () => {
 
   it('shouts again when an acknowledged session does something new', async () => {
     const user = userEvent.setup();
-    const blocked = (updatedAt: string) =>
-      session({ sessionId: 'a', title: 'Blocked', state: 'needs_input', updatedAt });
+    const blocked = (stateSince: number) =>
+      session({ sessionId: 'a', title: 'Blocked', state: 'needs_input', stateSince });
 
-    renderPanel([blocked(new Date(NOW - 60_000).toISOString())]);
+    renderPanel([blocked(NOW - 60_000)]);
     await user.click(rowByName(/^Blocked/));
     expect(rowByName(/^Blocked/)).not.toHaveClass('row--loud');
 
     // A new hook event moves updatedAt on, so the acknowledgement no longer covers it.
     cleanup();
-    renderPanel([blocked(new Date(NOW).toISOString())]);
+    renderPanel([blocked(NOW)]);
     expect(rowByName(/^Blocked/)).toHaveClass('row--loud');
   });
 
@@ -370,12 +362,11 @@ describe('Panel', () => {
     expect(mocks.onSessionClick).toHaveBeenCalledTimes(1);
   });
 
-  it('offers a one-click hook install from the empty state when nothing is detected', () => {
+  it('says the machine is quiet, with nothing to install', () => {
     renderPanel([]);
 
-    expect(screen.getByText('No Claude Code sessions detected')).toBeInTheDocument();
-    // A packaged app has no repository and no npm, so the fix has to be a button.
-    expect(screen.getByRole('button', { name: 'Install hook' })).toBeInTheDocument();
+    expect(screen.getByText('No agents running right now')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Install/ })).not.toBeInTheDocument();
     expect(screen.queryAllByRole('listitem')).toHaveLength(0);
   });
 
@@ -472,9 +463,10 @@ describe('Panel', () => {
   });
 
   it('ages a row on its own, without new store data', () => {
+    const frozen = Date.parse('2026-09-09T12:00:00.000Z');
     vi.useFakeTimers();
-    vi.setSystemTime(NOW);
-    renderPanel([session({ sessionId: 'a', title: 'Long runner' })]);
+    vi.setSystemTime(frozen);
+    renderPanel([session({ sessionId: 'a', title: 'Long runner', stateSince: frozen })]);
 
     expect(rowByName(/^Long runner/)).toHaveTextContent('0s');
 
@@ -489,10 +481,21 @@ describe('Panel', () => {
     expect(rowByName(/^Long runner/)).toHaveTextContent('4m');
   });
 
-  it('shows no age for a scanner-only session, whose timestamp is the scan not the transition', () => {
-    renderPanel([session({ sessionId: 'a', title: 'Discovered', source: 'scanner' })]);
+  it('shows an age for every session, whatever its kind', () => {
+    // The old two-source pipeline had rows whose timestamp was the sweep that found them, so
+    // they showed nothing. There is one source and one real transition time now (ADR-0018).
+    renderPanel([
+      session({ sessionId: 'a', title: 'Attached', stateSince: NOW - 12_000 }),
+      session({
+        sessionId: 'b',
+        title: 'Dispatched',
+        kind: 'background',
+        stateSince: NOW - 12_000,
+      }),
+    ]);
 
-    expect(rowByName(/^Discovered/).querySelector('.row__age')?.textContent).toBe('');
+    expect(rowByName(/^Attached/)).toHaveTextContent('12s');
+    expect(rowByName(/^Dispatched/)).toHaveTextContent('12s');
   });
 
   it('stays legible with ten concurrent sessions', () => {

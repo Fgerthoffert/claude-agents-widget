@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 import { SetupStep } from './SetupStep';
 import type { SetupState } from '../core/evaluateSetupState';
 import type { DetectionHealth } from '../core/types';
@@ -7,19 +5,12 @@ import type { SystemSettingsPane } from '../detection/openSystemSettings';
 
 interface SetupViewProps {
   readonly setup: SetupState;
-  /** Whether sweeps are producing data. Shown before the checklist when they are not. */
+  /** Whether sweeps are producing data. Shown first when they are not. */
   readonly health: DetectionHealth;
-  /** Build identity (`v0.2.1 (abc1234)`), or `null` before the native layer answers. */
+  /** Build identity (`v0.8.0 (abc1234)`), or `null` before the native layer answers. */
   readonly buildIdentity: string | null;
   /** Absolute path of the app log, or `null` outside the native shell. */
   readonly logPath: string | null;
-  readonly hookPath: string;
-  readonly settingsPath: string;
-  /** The `hooks` block an install would write; `null` when nothing would change. */
-  readonly preview: string | null;
-  readonly busy: boolean;
-  readonly outcome: string | null;
-  readonly onInstall: () => void;
   readonly onOpenPane: (pane: SystemSettingsPane) => void;
   readonly onCopyDiagnostics: () => void;
   readonly onClose: () => void;
@@ -31,54 +22,35 @@ interface SetupViewProps {
 const plural = (count: number, one: string, many: string): string => (count === 1 ? one : many);
 
 /**
- * The first-run guide and the permanent diagnostics view, in the same 320px panel.
+ * Setup and diagnostics, in the same 320px panel.
  *
- * **Two** steps, in the order they block each other: without the hooks nothing is detected, and
- * without the macOS grant a click cannot raise a window. Each says what it will do *before*
- * offering the button that does it, which is the whole consent model — the install writes to
- * `~/.claude/settings.json` (ADR-0009).
+ * **One** step. There were three: install a hook script into `~/.claude/settings.json`, grant
+ * macOS the right to raise windows, and restart any sessions that predated the install. Two of
+ * them are gone because the widget no longer needs anything installed — it asks
+ * `claude agents --json` what the sessions are doing (ADR-0018) — and the third was never a step
+ * the user performed here.
  *
- * It used to say considerably more, and at 320px wide that made a wall of prose out of a job with
- * two buttons in it (ADR-0013). What is left follows three rules. A step that is **done**
- * collapses to its heading and chip: it is a receipt, not an instruction, and the space belongs
- * to whatever is still outstanding. Reassurance — existing hooks kept, a backup written first —
- * sits behind *Show the change*, which is where a suspicious user is already looking. And the old
- * third step was never a step at all, because the user does nothing in the app to satisfy it; it
- * is now one line of status under the list.
- *
- * Nothing here claims a permission is granted unless a real click proved it: macOS does not
- * expose the Accessibility grant to the app that needs it, and a green tick on faith would be
- * worse than an honest "unknown".
- *
- * The preferences below the checklist are the one part of this view that is not about getting
- * set up, and they sit here because it is the panel's only screen with room for a sentence of
- * explanation. There is exactly one so far, and it says what turning it off gets you rather than
- * only what it does (ADR-0015).
+ * What is left is the one thing that cannot be automated: macOS will not let an app request
+ * Accessibility for itself, so this can only link to the pane and be honest about not knowing.
+ * The step is never `done` on faith — only a click that actually reached a window proves it.
  */
 export const SetupView = ({
   setup,
   health,
   buildIdentity,
   logPath,
-  hookPath,
-  settingsPath,
-  preview,
-  busy,
-  outcome,
-  onInstall,
   onOpenPane,
   onCopyDiagnostics,
   onClose,
   autoHeight,
   onAutoHeightChange,
 }: SetupViewProps) => {
-  const [showChange, setShowChange] = useState(false);
-  const { hooks, permissions, sessions } = setup;
+  const { permissions, sessions } = setup;
 
   return (
     <section className="setup" aria-label="Setup and diagnostics">
       <div className="setup__scroll">
-        {/* Above the checklist: a broken pipeline invalidates every tick below it (ADR-0011). */}
+        {/* First: a broken pipeline explains every other symptom below it (ADR-0011). */}
         {health.failure !== null && (
           <p className="setup__outcome" role="alert">
             <b>Detection is not running.</b> {health.failure}
@@ -98,55 +70,7 @@ export const SetupView = ({
           ))}
 
         <ol className="setup__steps">
-          <SetupStep index={1} title="Install the Claude Code hooks" status={hooks.status}>
-            {hooks.status === 'blocked' ? (
-              <p className="setup__text">
-                <code>{settingsPath}</code> is not valid JSON, so nothing will be written to it. Fix
-                or move the file, then come back.
-              </p>
-            ) : hooks.status === 'done' ? null : (
-              <>
-                <p className="setup__text">
-                  Adds {hooks.missingEvents.length}{' '}
-                  {plural(hooks.missingEvents.length, 'entry', 'entries')} to{' '}
-                  <code>{settingsPath}</code> and copies the hook script to <code>{hookPath}</code>.
-                </p>
-                <div className="setup__actions">
-                  <button
-                    type="button"
-                    className="setup__button setup__button--primary"
-                    onClick={onInstall}
-                    disabled={busy}
-                  >
-                    {busy ? 'Installing…' : 'Install hooks'}
-                  </button>
-                  <button
-                    type="button"
-                    className="setup__button"
-                    aria-expanded={showChange}
-                    onClick={() => {
-                      setShowChange((shown) => !shown);
-                    }}
-                  >
-                    {showChange ? 'Hide the change' : 'Show the change'}
-                  </button>
-                </div>
-                {showChange && (
-                  <>
-                    <p className="setup__muted">
-                      Your existing hooks are kept exactly as they are, and a backup of{' '}
-                      <code>{settingsPath}</code> is written first. Adding:{' '}
-                      {hooks.missingEvents.join(', ')}.
-                    </p>
-                    <pre className="setup__preview">{preview ?? 'Nothing would change.'}</pre>
-                  </>
-                )}
-              </>
-            )}
-            {outcome !== null && <p className="setup__outcome">{outcome}</p>}
-          </SetupStep>
-
-          <SetupStep index={2} title="Let macOS raise windows" status={permissions.status}>
+          <SetupStep index={1} title="Let macOS raise windows" status={permissions.status}>
             {permissions.status === 'done' ? null : (
               <>
                 <p className="setup__text">
@@ -156,7 +80,7 @@ export const SetupView = ({
                 <div className="setup__actions">
                   <button
                     type="button"
-                    className="setup__button"
+                    className="setup__button setup__button--primary"
                     onClick={() => {
                       onOpenPane('accessibility');
                     }}
@@ -187,14 +111,12 @@ export const SetupView = ({
           </SetupStep>
         </ol>
 
-        {/* Not a step: nothing the user does in this app satisfies it (ADR-0013). */}
         <p className="setup__status">
-          {sessions.status === 'done'
-            ? `${String(sessions.hookOwned)} of ${String(sessions.total)} ${plural(sessions.total, 'session', 'sessions')} reporting through the hooks.`
-            : sessions.status === 'todo'
-              ? `${String(sessions.total)} ${plural(sessions.total, 'session', 'sessions')} found by the process scanner, none reporting through the hooks — restart them for precise states.`
-              : 'No agents running right now.'}
+          {sessions.total === 0
+            ? 'No agents running right now.'
+            : `${String(sessions.total)} ${plural(sessions.total, 'session', 'sessions')} reported by Claude Code${sessions.background === 0 ? '' : `, ${String(sessions.background)} in the background`}.`}
         </p>
+
         <section className="setup__prefs" aria-label="Preferences">
           <h2 className="setup__prefs-title">Panel</h2>
           <label className="setup__toggle">

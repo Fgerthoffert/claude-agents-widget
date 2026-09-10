@@ -1,21 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { countSessionStates } from './countSessionStates';
+import { aSession } from './testing/aSession';
 import type { Session, SessionState } from './types';
 
-const session = (sessionId: string, state: SessionState): Session => ({
-  sessionId,
-  title: null,
-  cwd: '/Users/test/proj',
-  transcriptPath: null,
-  state,
-  source: 'hook',
-  notificationType: null,
-  notificationMessage: null,
-  updatedAt: '2026-09-09T12:00:00.000Z',
-  claudePid: null,
-  ancestors: [],
-});
+const session = (sessionId: string, state: SessionState): Session =>
+  aSession({ sessionId, title: null, cwd: '/Users/test/proj', state, claudePid: null });
 
 describe('countSessionStates', () => {
   it('buckets sessions by state', () => {

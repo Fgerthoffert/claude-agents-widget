@@ -1,6 +1,6 @@
 # ADR-0012: One row per terminal session — per-process de-duplication and desktop exclusion
 
-- **Status**: Accepted
+- **Status**: Superseded by [ADR-0018](0018-claude-code-is-the-source-of-truth.md) — one row per session comes free from the source, and the desktop-app sessions this excluded are simply not in it.
 - **Date**: 2026-09-09
 
 ## Context

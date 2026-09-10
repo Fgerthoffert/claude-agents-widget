@@ -66,33 +66,20 @@ const writeHash = (route: PreviewRoute): void => {
 
 const home = '/Users/you';
 
-/** A half-finished install: hooks partly registered, permissions unproven, sessions unhooked. */
+/** Accessibility never proved, which is what a fresh install looks like. */
 const setupTodo = {
-  hooks: {
-    status: 'todo' as const,
-    registeredEvents: ['Stop'],
-    missingEvents: ['SessionStart', 'UserPromptSubmit', 'Notification', 'SessionEnd'],
-    scriptInstalled: false,
-  },
   permissions: { status: 'unknown' as const, lastFocus: null },
-  sessions: { status: 'todo' as const, total: 9, hookOwned: 0, scannerOnly: 9 },
-  needsSetup: true,
+  sessions: { total: 9, background: 2 },
 };
 
 /**
- * Everything done, so both steps collapse to a heading and a chip.
+ * A click that reached a window, so the one step collapses to a heading and a chip.
  *
  * This is the short-content case, and the one that catches an auto-height measurement that can
  * only grow: `.setup__scroll` both stretches and scrolls, so a naive `scrollHeight` reports the
  * window's height rather than the content's whenever the content is the shorter of the two.
  */
 const setupDone = {
-  hooks: {
-    status: 'done' as const,
-    registeredEvents: ['SessionStart', 'UserPromptSubmit', 'Stop', 'Notification', 'SessionEnd'],
-    missingEvents: [],
-    scriptInstalled: true,
-  },
   permissions: {
     status: 'done' as const,
     lastFocus: {
@@ -103,18 +90,7 @@ const setupDone = {
       detail: 'window',
     },
   },
-  sessions: { status: 'done' as const, total: 9, hookOwned: 9, scannerOnly: 0 },
-  needsSetup: false,
-};
-
-/** What the row's ancestor chain says about where it runs, for the simulated focus log. */
-const hostAppName = (session: Session): string => {
-  const gui = session.ancestors.find((ancestor) => ancestor.args.includes('.app/'));
-  if (gui === undefined) return 'an unknown host';
-
-  const bundle = gui.args.split('/').find((part) => part.endsWith('.app'));
-
-  return bundle === undefined ? 'an unknown host' : bundle.replace('.app', '');
+  sessions: { total: 9, background: 0 },
 };
 
 /**
@@ -182,7 +158,7 @@ export const PanelPreview = () => {
   const onSelect = (session: Session) => {
     acknowledge(session);
     setLastAction(
-      `focusSession('${session.sessionId}') → would raise ${hostAppName(session)} at ${session.cwd ?? 'an unknown path'}`,
+      `focusSession('${session.sessionId}') → would walk pid ${String(session.claudePid ?? 0)} to its window (${session.cwd ?? 'an unknown path'})`,
     );
   };
 
@@ -214,16 +190,8 @@ export const PanelPreview = () => {
           <SetupView
             setup={scene === 'setup-done' ? setupDone : setupTodo}
             health={{ failure: null, degraded: [] }}
-            buildIdentity="v0.2.2 (a1b2c3d)"
+            buildIdentity="v0.8.0 (a1b2c3d)"
             logPath="/Users/you/Library/Logs/claude-agents-widget/app.log"
-            hookPath="/Users/you/.claude-agents-widget/hook.mjs"
-            settingsPath="/Users/you/.claude/settings.json"
-            preview={'{\n  "hooks": {\n    "SessionStart": []\n  }\n}'}
-            busy={false}
-            outcome={null}
-            onInstall={() => {
-              setLastAction('Install clicked: the real panel would merge the hooks.');
-            }}
             onOpenPane={(pane) => {
               setLastAction(`Would open the ${pane} pane in System Settings.`);
             }}
@@ -240,15 +208,7 @@ export const PanelPreview = () => {
           groups.waiting.length === 0 &&
           groups.done.length === 0 ? (
           <EmptyState
-            hooksInstalled={false}
             failure={null}
-            busy={false}
-            outcome={null}
-            onInstall={() => {
-              setLastAction(
-                'Install clicked: the real panel would merge the hooks into ~/.claude/settings.json.',
-              );
-            }}
             onOpenSetup={() => {
               setLastAction('Setup clicked: the real panel would open the setup view.');
             }}

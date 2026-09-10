@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { FocusResult } from '../core/focus/types';
+import { aSession } from '../core/testing/aSession';
 import type { Session } from '../core/types';
 
 const mocks = vi.hoisted(() => ({ focusSession: vi.fn() }));
@@ -8,19 +9,7 @@ vi.mock('../detection/focusSession', () => ({ focusSession: mocks.focusSession }
 
 const { onSessionClick } = await import('./onSessionClick');
 
-const session: Session = {
-  sessionId: 'session-1',
-  title: 'Refactor the scanner',
-  cwd: '/Users/test/code/api',
-  transcriptPath: null,
-  state: 'working',
-  source: 'hook',
-  notificationType: null,
-  notificationMessage: null,
-  updatedAt: '2026-09-09T12:00:00.000Z',
-  claudePid: 1234,
-  ancestors: [],
-};
+const session: Session = aSession({ sessionId: 'session-1', title: 'Refactor the scanner' });
 
 const resolves = (result: FocusResult): void => {
   mocks.focusSession.mockResolvedValue(result);

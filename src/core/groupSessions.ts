@@ -23,9 +23,9 @@ export interface SessionGroups {
  *
  * So **Waiting for you** is now exactly `needs_input`: a permission prompt or an explicit
  * question, where the agent cannot continue until it is answered. Finished and idle work moved to
- * its own **Done** section below it, and `idle_prompt` — Claude Code noting that a session has
- * been sitting idle, which blocks nothing — is classified as `done_idle` at the source
- * (`mapHookEventToState`) rather than being special-cased here.
+ * its own **Done** section below it. Which is which is decided at the source, by Claude Code's
+ * own `status` and `waitingFor` (ADR-0018) — an idle session is never `needs_input` to begin
+ * with, so there is nothing to special-case here.
  *
  * `ended` sessions are dropped entirely. Store order is preserved inside each group, so rows
  * never move under the cursor.
