@@ -14,8 +14,6 @@ export interface FocusHost {
   readonly processName: string | null;
   /** For `open -b`. `null` only for `unknown`, which is why unknown cannot even degrade. */
   readonly bundleId: string | null;
-  /** True when `open -b <id> <path>` focuses the window already holding that path (editors). */
-  readonly opensPaths: boolean;
   /** True when the adapter matches windows by tty, so the shell must look one up. */
   readonly needsTty: boolean;
 }
@@ -38,7 +36,7 @@ export interface FocusScript {
 }
 
 /** Shell commands the focus engine may run; each is allowlisted in capabilities/default.json. */
-export type FocusCommandName = 'osascript' | 'open-bundle' | 'open-bundle-path' | 'ps' | 'ps-tty';
+export type FocusCommandName = 'osascript' | 'open-bundle' | 'ps' | 'ps-tty';
 
 /** One attempt in the degradation chain. */
 export interface FocusStep {
@@ -47,12 +45,6 @@ export interface FocusStep {
   readonly method: FocusMethod;
   /** True when this step is coarser than the ideal outcome for its host. */
   readonly degraded: boolean;
-  /**
-   * True when the step may *open* a window instead of raising an existing one. Such a step is
-   * skipped once an earlier attempt has proved there is no such window (`window-not-found`):
-   * the user asked to be taken to a running agent, not to have a new window made for them.
-   */
-  readonly mayCreateWindow: boolean;
   /**
    * `marker`: the script echoes its method name on stdout, so "ran but matched nothing" is
    * distinguishable from "failed". `exit`: a zero exit code is the only signal available.

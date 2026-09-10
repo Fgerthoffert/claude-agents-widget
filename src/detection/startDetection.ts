@@ -2,7 +2,7 @@ import { BaseDirectory, mkdir, watchImmediate } from '@tauri-apps/plugin-fs';
 
 import { describeDetectionFailure } from '../core/describeDetectionFailure';
 import { reconcileSessions } from '../core/reconcileSessions';
-import { logDetection } from './logDetection';
+import { logToApp } from './logToApp';
 import { readHookRecords, SESSIONS_DIR } from './readHookRecords';
 import { readSessionTitles } from './readSessionTitles';
 import { scanClaudeSessions } from './scanClaudeSessions';
@@ -46,7 +46,7 @@ export const startDetection = async (store: SessionStore): Promise<() => void> =
       ...(hooks.status === 'rejected' ? [describeDetectionFailure('hooks', hooks.reason)] : []),
       ...(scan.status === 'rejected' ? [describeDetectionFailure('scanner', scan.reason)] : []),
     ];
-    for (const problem of problems) void logDetection('error', problem);
+    for (const problem of problems) void logToApp('error', problem);
 
     if (hooks.status === 'rejected' && scan.status === 'rejected') {
       // Both sources down: the sweep produced nothing, so this is a failure, not a degradation.
@@ -64,7 +64,7 @@ export const startDetection = async (store: SessionStore): Promise<() => void> =
     ]).catch((error: unknown) => {
       // A title is decoration; the row falls back to its project directory without one.
       const problem = describeDetectionFailure('titles', error);
-      void logDetection('error', problem);
+      void logToApp('error', problem);
       problems.push(problem);
       return new Map<string, string>();
     });
@@ -78,7 +78,7 @@ export const startDetection = async (store: SessionStore): Promise<() => void> =
     // Only on a change, so the log stays a timeline rather than a 5s heartbeat — and so a
     // report of "the panel went empty" can be placed in time.
     if (after !== before) {
-      void logDetection('info', `sessions: ${String(before)} -> ${String(after)}`);
+      void logToApp('info', `sessions: ${String(before)} -> ${String(after)}`);
     }
 
     publishHealth(null, problems);
@@ -97,7 +97,7 @@ export const startDetection = async (store: SessionStore): Promise<() => void> =
       } catch (error) {
         // A failed sweep leaves the last good snapshot in place; the next one retries.
         const failure = describeDetectionFailure('sweep', error);
-        void logDetection('error', failure);
+        void logToApp('error', failure);
         publishHealth(failure, []);
       }
     });
@@ -112,14 +112,14 @@ export const startDetection = async (store: SessionStore): Promise<() => void> =
       return await watchImmediate(SESSIONS_DIR, sweep, { baseDir: BaseDirectory.Home });
     } catch (error) {
       state.watcherProblem = describeDetectionFailure('watcher', error);
-      void logDetection('error', `${state.watcherProblem} — falling back to the 5s scan only`);
+      void logToApp('error', `${state.watcherProblem} — falling back to the 5s scan only`);
       return null;
     }
   })();
 
   const interval = setInterval(sweep, SCAN_INTERVAL_MS);
 
-  void logDetection(
+  void logToApp(
     'info',
     `detection started (watcher ${unwatch === null ? 'unavailable' : 'active'}, ${String(SCAN_INTERVAL_MS)}ms interval)`,
   );

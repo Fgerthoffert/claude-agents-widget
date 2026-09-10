@@ -33,7 +33,6 @@ describe('identifyOwnerApp', () => {
       appName: 'Visual Studio Code',
       processName: 'Code',
       bundleId: 'com.microsoft.VSCode',
-      opensPaths: true,
       needsTty: false,
     });
   });
@@ -45,7 +44,6 @@ describe('identifyOwnerApp', () => {
     expect(host.kind).toBe('iterm2');
     expect(host.appName).toBe('iTerm');
     expect(host.needsTty).toBe(true);
-    expect(host.opensPaths).toBe(false);
   });
 
   it('identifies Terminal.app', () => {

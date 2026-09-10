@@ -145,11 +145,6 @@
           ]
         },
         {
-          "name": "open-bundle-path",
-          "cmd": "/usr/bin/open",
-          "args": ["-b", { "validator": "[A-Za-z0-9][A-Za-z0-9._-]*" }, { "validator": "/[^\\n]*" }]
-        },
-        {
           "name": "open-settings-pane",
           "cmd": "/usr/bin/open",
           "args": [{ "validator": "x-apple\\.systempreferences:[A-Za-z0-9._?=&-]+" }]

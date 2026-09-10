@@ -167,6 +167,41 @@ describe('Panel', () => {
     expect(rowByName(/^Blocked/)).toHaveClass('row--loud');
   });
 
+  it('offers the grant, in one click, when macOS refused the click', async () => {
+    const user = userEvent.setup();
+    mocks.onSessionClick.mockResolvedValue({
+      ok: false,
+      method: null,
+      permissionDenied: true,
+      degraded: false,
+      detail: 'permission-denied',
+    });
+    renderPanel([session({ sessionId: 'a', title: 'Blocked', state: 'needs_input' })]);
+
+    await user.click(rowByName(/^Blocked/));
+
+    const notice = await screen.findByRole('status');
+    expect(notice).toHaveTextContent(/Accessibility/);
+    expect(screen.getByRole('button', { name: 'Open Accessibility' })).toBeInTheDocument();
+  });
+
+  it('does not offer the grant for a failure the grant cannot fix', async () => {
+    const user = userEvent.setup();
+    mocks.onSessionClick.mockResolvedValue({
+      ok: false,
+      method: null,
+      permissionDenied: false,
+      degraded: false,
+      detail: 'window-not-found',
+    });
+    renderPanel([session({ sessionId: 'a', title: 'Blocked', state: 'needs_input' })]);
+
+    await user.click(rowByName(/^Blocked/));
+
+    await screen.findByRole('status');
+    expect(screen.queryByRole('button', { name: 'Open Accessibility' })).not.toBeInTheDocument();
+  });
+
   it('says what happened when a click could not reach the window', async () => {
     const user = userEvent.setup();
     mocks.onSessionClick.mockResolvedValue({

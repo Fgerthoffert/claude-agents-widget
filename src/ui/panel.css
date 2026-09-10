@@ -649,6 +649,23 @@ body {
   min-width: 0;
 }
 
+/* Inline in the sentence, so it reads as the end of the explanation rather than as chrome. */
+.panel__notice-action {
+  padding: 0;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: var(--state-working);
+  background: transparent;
+  cursor: pointer;
+}
+
+.panel__notice-action:hover {
+  text-decoration-thickness: 2px;
+}
+
 .panel__notice-dismiss {
   display: flex;
   width: 13px;

@@ -3,6 +3,12 @@ import { useEffect } from 'react';
 interface PanelNoticeProps {
   /** What to say, or `null` when the last click needed no explanation. */
   readonly message: string | null;
+  /**
+   * Offered only when the last click was refused by macOS — the one failure the user can fix,
+   * and the one they will never go looking for. Absent otherwise: a notice with a button that
+   * does not help is worse than a notice.
+   */
+  readonly onGrantAccess?: (() => void) | undefined;
   readonly onDismiss: () => void;
 }
 
@@ -20,8 +26,12 @@ const DISMISS_AFTER_MS = 8_000;
  * panel's whole value is the list, and a message that pushed a session off the bottom would
  * cost more than it explains. `role="status"` rather than `role="alert"` — it reports on
  * something the user just did, so it does not need to interrupt them.
+ *
+ * When macOS refused the click it also carries the way out, because "grant Accessibility in
+ * Setup" is three navigations away from the row the user just pressed, and the grant is voided
+ * by every app update — so this is a message they will see again and again (ADR-0016).
  */
-export const PanelNotice = ({ message, onDismiss }: PanelNoticeProps) => {
+export const PanelNotice = ({ message, onGrantAccess, onDismiss }: PanelNoticeProps) => {
   useEffect(() => {
     if (message === null) return;
 
@@ -35,7 +45,17 @@ export const PanelNotice = ({ message, onDismiss }: PanelNoticeProps) => {
 
   return (
     <div className="panel__notice" role="status">
-      <span className="panel__notice-text">{message}</span>
+      <span className="panel__notice-text">
+        {message}
+        {onGrantAccess !== undefined && (
+          <>
+            {' '}
+            <button type="button" className="panel__notice-action" onClick={onGrantAccess}>
+              Open Accessibility
+            </button>
+          </>
+        )}
+      </span>
       <button
         type="button"
         className="panel__notice-dismiss"

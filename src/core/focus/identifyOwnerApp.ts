@@ -18,7 +18,6 @@ const HOSTS: readonly { readonly marker: string; readonly host: FocusHost }[] = 
       appName: 'Visual Studio Code - Insiders',
       processName: 'Code - Insiders',
       bundleId: 'com.microsoft.VSCodeInsiders',
-      opensPaths: true,
       needsTty: false,
     },
   },
@@ -29,7 +28,6 @@ const HOSTS: readonly { readonly marker: string; readonly host: FocusHost }[] = 
       appName: 'Visual Studio Code',
       processName: 'Code',
       bundleId: 'com.microsoft.VSCode',
-      opensPaths: true,
       needsTty: false,
     },
   },
@@ -41,7 +39,6 @@ const HOSTS: readonly { readonly marker: string; readonly host: FocusHost }[] = 
       processName: 'Cursor',
       // Cursor ships under a ToDesktop identifier; unverified on this machine (ADR-0007).
       bundleId: 'com.todesktop.230313mzl4w4u92',
-      opensPaths: true,
       needsTty: false,
     },
   },
@@ -52,7 +49,6 @@ const HOSTS: readonly { readonly marker: string; readonly host: FocusHost }[] = 
       appName: 'iTerm',
       processName: 'iTerm2',
       bundleId: 'com.googlecode.iterm2',
-      opensPaths: false,
       needsTty: true,
     },
   },
@@ -63,7 +59,6 @@ const HOSTS: readonly { readonly marker: string; readonly host: FocusHost }[] = 
       appName: 'Terminal',
       processName: 'Terminal',
       bundleId: 'com.apple.Terminal',
-      opensPaths: false,
       needsTty: true,
     },
   },
@@ -74,7 +69,6 @@ const HOSTS: readonly { readonly marker: string; readonly host: FocusHost }[] = 
       appName: 'Ghostty',
       processName: 'ghostty',
       bundleId: 'com.mitchellh.ghostty',
-      opensPaths: false,
       // Ghostty's dictionary exposes `working directory` per surface, but no tty.
       needsTty: false,
     },
@@ -87,7 +81,6 @@ const HOSTS: readonly { readonly marker: string; readonly host: FocusHost }[] = 
       appName: null,
       processName: 'Warp',
       bundleId: 'dev.warp.Warp-Stable',
-      opensPaths: false,
       needsTty: false,
     },
   },
@@ -98,7 +91,6 @@ const UNKNOWN: FocusHost = {
   appName: null,
   processName: null,
   bundleId: null,
-  opensPaths: false,
   needsTty: false,
 };
 

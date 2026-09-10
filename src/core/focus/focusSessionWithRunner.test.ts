@@ -58,20 +58,38 @@ describe('focusSessionWithRunner', () => {
     expect(calls).toEqual(['osascript']);
   });
 
-  it('falls back to opening the folder when Accessibility consent is missing', async () => {
+  it('falls back to activation, not to opening a folder, when consent is missing', async () => {
+    // The folder step is gone (ADR-0016): reached blind it opens a *new* editor window, which
+    // is what the user reported. Activation is the honest degradation.
     const { run, calls } = runnerFor({
       osascript: fail('execution error: osascript is not allowed assistive access. (-1728)'),
-      'open-bundle-path': ok(),
+      'open-bundle': ok(),
     });
     await expect(focusSessionWithRunner(session(), run)).resolves.toEqual({
       ok: true,
       host: 'vscode',
-      method: 'window',
-      // Phase 5's first-run guide reads this even though the click worked.
+      method: 'app',
+      // The first-run guide reads this even though the click worked.
       degradedFrom: 'permission-denied',
       detail: null,
     });
-    expect(calls).toEqual(['osascript', 'open-bundle-path']);
+    expect(calls).toEqual(['osascript', 'open-bundle']);
+  });
+
+  it('never runs a command that could open a window, whatever the precise attempt did', async () => {
+    const outcomes = [
+      ['no such window', ok('none')],
+      ['a refused grant', fail('not allowed assistive access')],
+      ['a timeout', { code: null, stdout: '', stderr: 'timed out' }],
+      ['a broken script', fail('-1728')],
+    ] as const;
+
+    for (const [, osascript] of outcomes) {
+      const { run, calls } = runnerFor({ osascript, 'open-bundle': ok() });
+      await focusSessionWithRunner(session(), run);
+
+      expect(calls).toEqual(['osascript', 'open-bundle']);
+    }
   });
 
   it('degrades all the way to app activation rather than doing nothing', async () => {
@@ -86,24 +104,9 @@ describe('focusSessionWithRunner', () => {
       degradedFrom: 'window-not-found',
       detail: null,
     });
-    // No `open-bundle-path`: the adapter looked and there is no such window, so opening the
-    // folder could only make a new one. Activation is the honest degradation (ADR-0013).
+    // Activation is the honest degradation: there is no folder-opening step left to reach for
+    // (ADR-0016), so a missing window means the app comes forward and the notice says so.
     expect(calls).toEqual(['osascript', 'open-bundle']);
-  });
-
-  it('still opens the folder when the precise attempt failed for an unrelated reason', async () => {
-    // A timeout says nothing about whether the window exists, so the folder step is still worth
-    // trying — unlike `window-not-found`, which answers the question.
-    const { run, calls } = runnerFor({
-      osascript: { code: null, stdout: '', stderr: 'osascript timed out' },
-      'open-bundle-path': ok(),
-    });
-    await expect(focusSessionWithRunner(session(), run)).resolves.toMatchObject({
-      ok: true,
-      method: 'window',
-      degradedFrom: 'timeout',
-    });
-    expect(calls).toEqual(['osascript', 'open-bundle-path']);
   });
 
   it('looks up the tty for a terminal host and reports the tab', async () => {
@@ -180,7 +183,6 @@ describe('focusSessionWithRunner', () => {
   it('reports the first, most diagnostic failure when every step fails', async () => {
     const { run, calls } = runnerFor({
       osascript: { code: null, stdout: '', stderr: 'osascript timed out' },
-      'open-bundle-path': fail('open: -10814'),
       'open-bundle': fail('open: -10814', 1),
     });
     const result = await focusSessionWithRunner(session(), run);
@@ -190,7 +192,7 @@ describe('focusSessionWithRunner', () => {
       reason: 'timeout',
       detail: 'osascript timed out',
     });
-    // Every fallback was still tried before giving up.
-    expect(calls).toEqual(['osascript', 'open-bundle-path', 'open-bundle']);
+    // The fallback was still tried before giving up.
+    expect(calls).toEqual(['osascript', 'open-bundle']);
   });
 });

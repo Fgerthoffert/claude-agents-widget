@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   readHookRecords: vi.fn(),
   scanClaudeSessions: vi.fn(),
   readSessionTitles: vi.fn(),
-  logDetection: vi.fn(),
+  logToApp: vi.fn(),
 }));
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
@@ -23,7 +23,7 @@ vi.mock('./readHookRecords', () => ({
 }));
 vi.mock('./scanClaudeSessions', () => ({ scanClaudeSessions: mocks.scanClaudeSessions }));
 vi.mock('./readSessionTitles', () => ({ readSessionTitles: mocks.readSessionTitles }));
-vi.mock('./logDetection', () => ({ logDetection: mocks.logDetection }));
+vi.mock('./logToApp', () => ({ logToApp: mocks.logToApp }));
 
 const { startDetection } = await import('./startDetection');
 
@@ -44,8 +44,7 @@ const record = (sessionId: string): SessionRecord => ({
   ancestors: [],
 });
 
-const logged = (): string =>
-  mocks.logDetection.mock.calls.map((call) => String(call[1])).join('\n');
+const logged = (): string => mocks.logToApp.mock.calls.map((call) => String(call[1])).join('\n');
 
 beforeEach(() => {
   for (const mock of Object.values(mocks)) mock.mockReset();
@@ -54,7 +53,7 @@ beforeEach(() => {
   mocks.readHookRecords.mockResolvedValue([record('a')]);
   mocks.scanClaudeSessions.mockResolvedValue({ scanned: [], livePids: [1] });
   mocks.readSessionTitles.mockResolvedValue(new Map());
-  mocks.logDetection.mockResolvedValue(undefined);
+  mocks.logToApp.mockResolvedValue(undefined);
 });
 
 afterEach(() => {

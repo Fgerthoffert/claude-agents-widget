@@ -142,8 +142,15 @@ npm run tauri dev
       a one-line notice says the exact window could not be reached and names the grant. It clears
       itself after a few seconds, or on its `✕`.
 - [ ] Close a session's terminal window without ending the session, then click its row: the notice
-      says the window is gone. **No new editor window is opened** — the folder-opening fallback is
-      skipped once the window is known to be absent (ADR-0013).
+      says the window is gone, and **no new editor window is opened**.
+- [ ] Revoke Accessibility, then click a VS Code session whose folder is **not** the root of any
+      open window (a nested repo, or a subdirectory): the app comes forward and **no new window
+      appears**. This is the ADR-0016 regression — the widget must never create a window, whatever
+      the precise attempt did.
+- [ ] Every click leaves a line in `~/Library/Logs/com.fgerthoffert.claude-agents-widget/`:
+      `info` when it landed on the window, `warn` with the reason when it did not.
+- [ ] After an app update, the first click reports the refused grant **and** offers
+      **Open Accessibility** in the notice; pressing it opens the right pane.
 - [ ] With Accessibility granted, click a VS Code session in a window that is not frontmost: the
       correct window comes forward in one movement, with no flash of a different window first.
 - [ ] Click a session in a repo whose name is a prefix of a sibling's (`cortex` next to

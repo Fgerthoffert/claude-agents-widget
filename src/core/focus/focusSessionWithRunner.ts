@@ -62,21 +62,13 @@ export const focusSessionWithRunner = async (
   }
 
   let firstFailure: FocusFailure | null = null;
-  let windowIsGone = false;
 
   for (const step of plan) {
-    // A step that can open a window is worth trying while the question is still open, and not
-    // once it has been answered: `window-not-found` means the adapter looked and there is no
-    // such window, so this step could only make a new one. The user clicked to be taken to a
-    // running agent; handing them a fresh empty editor instead is worse than saying so.
-    if (step.mayCreateWindow && windowIsGone) continue;
-
     const outcome = await run(step.command, step.args);
     const result = interpretFocusAttempt({ host: host.kind, step, outcome });
     if (result.ok) {
       return { ...result, degradedFrom: step.degraded ? (firstFailure?.reason ?? null) : null };
     }
-    windowIsGone ||= result.reason === 'window-not-found';
     firstFailure ??= result;
   }
 
