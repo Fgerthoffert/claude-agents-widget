@@ -206,7 +206,8 @@ export const PanelPreview = () => {
           />
         ) : groups.running.length === 0 &&
           groups.waiting.length === 0 &&
-          groups.done.length === 0 ? (
+          groups.done.length === 0 &&
+          groups.idle.length === 0 ? (
           <EmptyState
             failure={null}
             onOpenSetup={() => {
@@ -239,6 +240,16 @@ export const PanelPreview = () => {
               <SessionGroup
                 label="Done"
                 rows={toRows(groups.done)}
+                attention={false}
+                loudSessionId={loud}
+                pendingSessionId={null}
+                onSelect={onSelect}
+              />
+            )}
+            {groups.idle.length > 0 && (
+              <SessionGroup
+                label="Idle"
+                rows={toRows(groups.idle)}
                 attention={false}
                 loudSessionId={loud}
                 pendingSessionId={null}

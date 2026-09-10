@@ -28,6 +28,10 @@ interface SessionRowProps {
  * finished" at a glance. Exactly one gets `row--loud` on top of that — the wash, the pulse and
  * the heavier title. Which one is not this component's business; the panel decides.
  *
+ * `row--dormant` goes the other way: a settled session recedes, because the point of separating
+ * it out is that it is not asking for anything (ADR-0019). It stays clickable — going back to a
+ * cleared terminal is a perfectly reasonable thing to want.
+ *
  * A `<button>` rather than a clickable `<li>`: rows are the panel's one interactive element,
  * and this gets keyboard focus, Enter/Space and screen-reader semantics for free. It carries
  * no `data-tauri-drag-region`, which is what keeps a click on a row from starting a window
@@ -45,6 +49,7 @@ export const SessionRow = memo(
         className={[
           'row',
           session.state === 'needs_input' ? 'row--blocked' : '',
+          session.state === 'dormant' ? 'row--dormant' : '',
           loud ? 'row--loud' : '',
           pending ? 'row--pending' : '',
         ]

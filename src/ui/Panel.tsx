@@ -35,9 +35,10 @@ import type { Session } from '../core/types';
 import './panel.css';
 
 /**
- * The always-on-top floating panel, split into the three things the user actually distinguishes:
+ * The always-on-top floating panel, split into the four things the user actually distinguishes:
  * **Running** (busy, needs nothing), **Waiting for you** (blocked on an answer and unable to
- * proceed) and **Done** (stopped, and not blocked).
+ * proceed), **Done** (stopped recently, worth reading) and **Idle** (cleared, or finished long
+ * enough ago that there is nothing to do about it — ADR-0019).
  *
  * Waiting used to hold finished sessions too, which made the heading claim more than it meant
  * (ADR-0014). Order inside each section comes from the store (`needs_input` before `done_idle`,
@@ -160,7 +161,10 @@ export const Panel = () => {
   const loud = useMemo(() => loudSessionId(sessions, seen), [sessions, seen]);
 
   const empty =
-    groups.running.length === 0 && groups.waiting.length === 0 && groups.done.length === 0;
+    groups.running.length === 0 &&
+    groups.waiting.length === 0 &&
+    groups.done.length === 0 &&
+    groups.idle.length === 0;
   // Only ever opened on request. There is nothing to install any more, so there is no first-run
   // state the panel has to interrupt with (ADR-0018) — the tray's Setup / Diagnostics is the way in.
   const setupOpen = showSetup;
@@ -212,6 +216,16 @@ export const Panel = () => {
                 <SessionGroup
                   label="Done"
                   rows={toRows(groups.done)}
+                  attention={false}
+                  loudSessionId={loud}
+                  pendingSessionId={pendingSessionId}
+                  onSelect={handleSelect}
+                />
+              )}
+              {groups.idle.length > 0 && (
+                <SessionGroup
+                  label="Idle"
+                  rows={toRows(groups.idle)}
                   attention={false}
                   loudSessionId={loud}
                   pendingSessionId={pendingSessionId}

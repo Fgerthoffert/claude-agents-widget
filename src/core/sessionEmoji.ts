@@ -4,6 +4,9 @@ const emoji: Readonly<Record<SessionState, string>> = {
   needs_input: '✋',
   working: '🔄',
   done_idle: '✅',
+  // Asleep, not finished: a cleared session, or one done long enough to stop mattering
+  // (ADR-0019). `ended` shares the glyph because it is never rendered.
+  dormant: '💤',
   ended: '💤',
 };
 

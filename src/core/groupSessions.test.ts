@@ -49,7 +49,14 @@ describe('groupSessions', () => {
     expect(groups.done.map((s) => s.sessionId)).toEqual(['first-done', 'second-done']);
   });
 
+  it('separates a settled session from one that just finished', () => {
+    const groups = groupSessions([session('recent', 'done_idle'), session('settled', 'dormant')]);
+
+    expect(groups.done.map((s) => s.sessionId)).toEqual(['recent']);
+    expect(groups.idle.map((s) => s.sessionId)).toEqual(['settled']);
+  });
+
   it('has empty groups when there is nothing to show', () => {
-    expect(groupSessions([])).toEqual({ running: [], waiting: [], done: [] });
+    expect(groupSessions([])).toEqual({ running: [], waiting: [], done: [], idle: [] });
   });
 });

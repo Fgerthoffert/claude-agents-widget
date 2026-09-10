@@ -79,6 +79,24 @@ npm run tauri dev
 - [ ] Park it deliberately hanging off the bottom edge (about a third visible), quit, relaunch:
       that position is preserved (still ≥60% visible is left alone).
 
+## Settled sessions (ADR-0019)
+
+- [ ] `/clear` a session and leave it: its row moves to **Idle**, dimmed, showing the project
+      directory instead of a name — Claude Code has generated none, so there is nothing to read.
+- [ ] Type something in that terminal: the row leaves Idle at once.
+- [ ] Open a brand-new `claude` and type nothing: it appears under **Idle**, not Done.
+- [ ] Finish a session and watch it: it stays in **Done** for thirty minutes, then moves to Idle.
+- [ ] Watch that transition happen without touching anything: the row moves **once**. It must not
+      flicker between Done and Idle on every poll — that is the feedback loop ADR-0019 guards
+      against, and it would be visible immediately.
+- [ ] A blocked session is never dimmed, however long it has been waiting.
+- [ ] A settled row is still clickable and still raises its window.
+- [ ] Hover a settled row: it returns to full strength, so it can be read.
+- [ ] The menu bar mark ignores settled sessions entirely.
+- [ ] The tray dropdown summary counts them separately (`… · 3 idle`).
+- [ ] Restart the widget with a long-finished session on screen: it shows under Done for up to
+      thirty minutes, because the clock is this process's. Nameless ones still settle at once.
+
 ## The three sections (ADR-0014)
 
 - [ ] **Waiting for you** holds only sessions blocked on an answer. A session that merely finished

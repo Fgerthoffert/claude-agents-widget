@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { carryStateSince } from './carryStateSince';
+import { SETTLE_AFTER_MS } from './settleSession';
 import type { Session, SessionSnapshot } from './types';
 
 const NOW = Date.parse('2026-09-10T12:00:00.000Z');
@@ -96,6 +97,62 @@ describe('carryStateSince', () => {
     const sessions = carryStateSince([], [snapshot('b', 'working'), snapshot('a', 'working')], NOW);
 
     expect(sessions.map((session) => session.sessionId)).toEqual(['a', 'b']);
+  });
+
+  it('settles a finished session once it has been finished long enough', () => {
+    const fresh = carryStateSince([], [snapshot('a', 'done_idle')], NOW - SETTLE_AFTER_MS);
+
+    expect(fresh[0]?.state).toBe('done_idle');
+    expect(carryStateSince(fresh, [snapshot('a', 'done_idle')], NOW)[0]?.state).toBe('dormant');
+  });
+
+  it('settles a nameless session on sight', () => {
+    const [session] = carryStateSince([], [snapshot('a', 'done_idle', { title: null })], NOW);
+
+    expect(session?.state).toBe('dormant');
+  });
+
+  it('keeps a settled session settled, poll after poll', () => {
+    // The trap: `dormant` is derived from `done_idle`, so comparing a stored `dormant` against a
+    // fresh `done_idle` snapshot looks like a state *change*, re-stamps the clock, puts the
+    // session back under thirty minutes and un-settles it — flipping it between two sections on
+    // every poll. `asReported` is what stops that (ADR-0019).
+    let sessions = carryStateSince([], [snapshot('a', 'done_idle')], NOW - SETTLE_AFTER_MS);
+    const settledAt = sessions[0]?.stateSince;
+
+    for (let poll = 1; poll <= 5; poll += 1) {
+      sessions = carryStateSince(sessions, [snapshot('a', 'done_idle')], NOW + poll * 3_000);
+      expect(sessions[0]?.state).toBe('dormant');
+      expect(sessions[0]?.stateSince).toBe(settledAt);
+    }
+  });
+
+  it('un-settles a session that goes back to work', () => {
+    const settled = carryStateSince([], [snapshot('a', 'done_idle', { title: null })], NOW);
+    const busy = carryStateSince(settled, [snapshot('a', 'working')], NOW + 1_000);
+
+    expect(busy[0]?.state).toBe('working');
+    expect(busy[0]?.stateSince).toBe(NOW + 1_000);
+  });
+
+  it('orders settled sessions last, below the ones just finished', () => {
+    const sessions = carryStateSince(
+      [],
+      [
+        snapshot('settled', 'done_idle', { title: null }),
+        snapshot('recent', 'done_idle'),
+        snapshot('blocked', 'needs_input'),
+        snapshot('busy', 'working'),
+      ],
+      NOW,
+    );
+
+    expect(sessions.map((session) => session.sessionId)).toEqual([
+      'blocked',
+      'busy',
+      'recent',
+      'settled',
+    ]);
   });
 
   it('passes everything else through untouched', () => {
