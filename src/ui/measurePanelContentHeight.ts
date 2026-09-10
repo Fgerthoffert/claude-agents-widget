@@ -17,15 +17,28 @@ const isScroller = (style: CSSStyleDeclaration): boolean =>
 const isClipped = (style: CSSStyleDeclaration): boolean => style.overflowY === 'hidden';
 
 /**
+ * A box with a deliberate `max-height` of its own — `.setup__preview` is capped at 130px and
+ * scrolls on purpose, because the JSON it shows is unbounded. Its box height *is* its answer;
+ * reading `scrollHeight` there would ask the window to grow to fit a whole settings file.
+ */
+const isCapped = (style: CSSStyleDeclaration): boolean =>
+  style.maxHeight !== 'none' && style.maxHeight !== '';
+
+/**
  * The height an element would take if nothing constrained it, in CSS pixels.
  *
- * Three cases, in order:
+ * Four cases, and **the order is the whole design**:
  *
- * - **A scroll container** already knows: `scrollHeight` is its content plus its padding,
- *   whatever height its box has been squeezed to.
- * - **A stretched or clipped box** knows nothing useful — `flex: 1` makes it as tall as the
- *   window, and `overflow: hidden` lets it be shorter than its content — so it is rebuilt from
- *   its children, plus its own padding, borders and row gaps.
+ * - **A capped box** answers with its own box: it was given a `max-height` because its content
+ *   is unbounded, and that decision outranks everything below.
+ * - **A stretched or clipped box** knows nothing useful about what it wants — `flex: 1` makes it
+ *   as tall as the window and `overflow: hidden` lets it be shorter than its content — so it is
+ *   rebuilt from its children, plus its own padding, borders and row gaps. This has to come
+ *   *before* the scroll-container case, because `.setup__scroll` is both: it stretches **and**
+ *   it scrolls, so its `scrollHeight` equals its stretched box whenever the content is shorter
+ *   than the window. Asking it first would mean the setup view could grow and never shrink.
+ * - **A scroll container** that is none of the above already knows: `scrollHeight` is its content
+ *   plus its padding, whatever height its box has been squeezed to.
  * - **Anything else** is already at its natural height.
  *
  * Margins are added by the element itself rather than by its parent, which is what makes the
@@ -35,9 +48,7 @@ const naturalHeight = (element: HTMLElement): number => {
   const style = getComputedStyle(element);
   const margins = px(style.marginTop) + px(style.marginBottom);
 
-  if (isScroller(style)) {
-    return element.scrollHeight + px(style.borderTopWidth) + px(style.borderBottomWidth) + margins;
-  }
+  if (isCapped(style)) return element.getBoundingClientRect().height + margins;
 
   if (isStretched(style) || isClipped(style)) {
     const children = Array.from(element.childNodes).filter(isElement);
@@ -53,6 +64,10 @@ const naturalHeight = (element: HTMLElement): number => {
       gaps +
       margins
     );
+  }
+
+  if (isScroller(style)) {
+    return element.scrollHeight + px(style.borderTopWidth) + px(style.borderBottomWidth) + margins;
   }
 
   return element.getBoundingClientRect().height + margins;

@@ -23,15 +23,23 @@ become automatic _by default_, with the old behaviour still reachable.
 
 ### The height is measured, not calculated
 
-`measurePanelContentHeight` reads the natural height back out of the live DOM. Three cases,
-applied recursively from the panel root:
+`measurePanelContentHeight` reads the natural height back out of the live DOM. Four cases, applied
+recursively from the panel root, **and the order is the whole design**:
 
-- a **scroll container** (`.group__list`, `.setup__scroll`) reports `scrollHeight`, which is its
-  content whatever height its box has been squeezed to;
-- a **stretched or clipped** box (`flex: 1`, `overflow: hidden`) is rebuilt from its children,
-  because `flex: 1` makes it as tall as the window and `overflow: hidden` lets it be shorter than
-  its content — neither tells us anything;
-- anything else is already at its natural height.
+1. a **capped** box (`.setup__preview`, `max-height: 130px`) answers with its own box: it was given
+   a maximum because its content is unbounded, and that decision outranks everything below;
+2. a **stretched or clipped** box (`flex: 1`, `overflow: hidden`) is rebuilt from its children,
+   because `flex: 1` makes it as tall as the window and `overflow: hidden` lets it be shorter than
+   its content — neither tells us anything;
+3. a **scroll container** that is neither of those (`.group__list`) reports `scrollHeight`, which
+   is its content whatever height its box has been squeezed to;
+4. anything else is already at its natural height.
+
+Case 2 has to precede case 3 because `.setup__scroll` is **both**: it stretches _and_ it scrolls.
+Asking it for `scrollHeight` first returns its stretched box whenever the content is shorter than
+the window, so the setup view could grow and never shrink. That fault survived the first round of
+review and was caught by giving the harness a scene where every step is finished — the one shape
+whose content is shorter than the default window.
 
 The alternative was a pure function over the section counts, with the row height, every heading,
 every separator and the legend as constants. It was rejected on drift: those numbers live in
@@ -68,12 +76,26 @@ With it on, the height is managed and a manual drag of the bottom edge is undone
 change. That is the honest reading of "auto-adjust", and the way to keep a height is the checkbox
 that says so.
 
-### Two hooks, one file, one gate
+### Re-measured after every commit
 
-`useAutoPanelHeight` re-measures when a signature string changes — the three section counts,
-whether a notice is up, whether setup is open. A `ResizeObserver` was tried first and does not work
-here: every box that decides this panel's height is either stretched by flex or clipped by
-overflow, so none of them changes size when the content inside it does.
+`useAutoPanelHeight` measures in a **layout effect with no dependency list**, and compares the
+result against the last measurement before it does anything async. A layout effect runs after
+React has written the DOM and before the browser paints, and reading `scrollHeight` there forces
+the layout to be current — so the measurement is always of what is on screen. The panel re-renders
+about once a second for its clock, and an unchanged measurement costs one DOM read and returns.
+
+Two narrower triggers were tried first and both failed:
+
+- A **`ResizeObserver`** cannot see this at all. Every box that decides the panel's height is
+  either stretched by flex or clipped by overflow, so none of them changes size when the content
+  inside it does. It would have looked right and fired never.
+- A **dependency string** naming everything that affects the height worked for the session list
+  and quietly failed for the setup view, whose height also depends on state the hook cannot see:
+  whether _Show the change_ is expanded, whether an install has reported an outcome, whether
+  detection has started failing. Enumerating another component's internals is a list that goes
+  stale the first time somebody adds a paragraph — and it had already gone stale before it shipped.
+
+### Sharing the store
 
 `usePersistedPanelFrame` and `usePanelSettings` now share one handle on `panel.json`
 (`panelStore.ts`), and both wait for the settings to load before touching the window. Two things
@@ -93,8 +115,8 @@ and half of it.
 
 - **A formula over the session counts.** Rejected above: it re-declares constants that already
   exist in the stylesheet.
-- **`ResizeObserver` on the content.** Rejected: nothing observable changes size, for the reason
-  above. It would have looked correct and fired never.
+- **`ResizeObserver` on the content**, or a dependency list describing when the height might have
+  changed. Both rejected, above — the first cannot fire, the second cannot be kept complete.
 - **Turning the setting off automatically when the user drags the bottom edge.** Tempting, and the
   discoverable option. Rejected because distinguishing a user's resize from our own `setSize`
   means comparing against the height we just asked for, and the two coincide often enough
@@ -117,14 +139,15 @@ parked beside real work. Twelve agents fit without scrolling on any normal displ
 190px.
 
 The browser harness demonstrates it: the frame runs the same `measurePanelContentHeight` against
-the same layout, with an **Auto height** toggle. That is the only way to see this behaviour, or
-check the measurement, without launching the native shell — and it is how the numbers above were
-verified.
+the same layout, on the same after-every-commit trigger, with an **Auto height** toggle. That is
+the only way to see this behaviour, or check the measurement, without launching the native shell —
+and it is how the numbers above were verified, and how the grow-but-never-shrink fault in the setup
+view was found.
 
-What we have committed to: the height signature must name everything that changes the panel's
-height. Add a section, or a second line to the legend, and it has to be listed there or the window
-will lag one change behind. The measurement itself needs no maintenance, which is the whole reason
-it is a measurement.
+Nothing needs maintaining when the panel gains a section, a line of legend or a paragraph of
+setup: there is no list of what affects the height, only a measurement of it. What _does_ need
+care is the four-case order in `measurePanelContentHeight`, and a new box that both stretches and
+scrolls, or that is capped, has to be reasoned about against those cases rather than added blind.
 
 The `minHeight` floor is duplicated in `useAutoPanelHeight` because there is no API to read it
 back from `tauri.conf.json`. A wrong value there means a slightly-too-short panel, never a broken

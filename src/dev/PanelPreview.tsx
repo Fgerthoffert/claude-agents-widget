@@ -20,7 +20,7 @@ import '../ui/panel.css';
 import './preview.css';
 
 /** `setup` is not a session list, so it lives beside `MockScenario` rather than inside it. */
-type PreviewScene = MockScenario | 'setup';
+type PreviewScene = MockScenario | 'setup' | 'setup-done';
 
 const scenes: readonly { readonly id: PreviewScene; readonly label: string }[] = [
   { id: 'typical', label: 'Typical (6)' },
@@ -29,6 +29,7 @@ const scenes: readonly { readonly id: PreviewScene; readonly label: string }[] =
   { id: 'blocked', label: 'One blocked' },
   { id: 'empty', label: 'Empty' },
   { id: 'setup', label: 'Setup' },
+  { id: 'setup-done', label: 'Setup (done)' },
 ];
 
 const isScene = (value: string): value is PreviewScene =>
@@ -66,7 +67,7 @@ const writeHash = (route: PreviewRoute): void => {
 const home = '/Users/you';
 
 /** A half-finished install: hooks partly registered, permissions unproven, sessions unhooked. */
-const setupState = {
+const setupTodo = {
   hooks: {
     status: 'todo' as const,
     registeredEvents: ['Stop'],
@@ -76,6 +77,34 @@ const setupState = {
   permissions: { status: 'unknown' as const, lastFocus: null },
   sessions: { status: 'todo' as const, total: 9, hookOwned: 0, scannerOnly: 9 },
   needsSetup: true,
+};
+
+/**
+ * Everything done, so both steps collapse to a heading and a chip.
+ *
+ * This is the short-content case, and the one that catches an auto-height measurement that can
+ * only grow: `.setup__scroll` both stretches and scrolls, so a naive `scrollHeight` reports the
+ * window's height rather than the content's whenever the content is the shorter of the two.
+ */
+const setupDone = {
+  hooks: {
+    status: 'done' as const,
+    registeredEvents: ['SessionStart', 'UserPromptSubmit', 'Stop', 'Notification', 'SessionEnd'],
+    missingEvents: [],
+    scriptInstalled: true,
+  },
+  permissions: {
+    status: 'done' as const,
+    lastFocus: {
+      ok: true,
+      method: 'window' as const,
+      permissionDenied: false,
+      degraded: false,
+      detail: 'window',
+    },
+  },
+  sessions: { status: 'done' as const, total: 9, hookOwned: 9, scannerOnly: 0 },
+  needsSetup: false,
 };
 
 /** What the row's ancestor chain says about where it runs, for the simulated focus log. */
@@ -110,9 +139,10 @@ export const PanelPreview = () => {
 
   // Ages are anchored to mount, not to every tick, so rows visibly age as you watch them.
   const [mountedMs] = useState(nowMs);
+  const isSetup = scene === 'setup' || scene === 'setup-done';
   const sessions = useMemo(
-    () => (scene === 'setup' ? [] : buildMockSessions(scene, mountedMs)),
-    [scene, mountedMs],
+    () => (isSetup ? [] : buildMockSessions(scene, mountedMs)),
+    [isSetup, scene, mountedMs],
   );
   const { seen, acknowledge } = useAcknowledged();
   const groups = groupSessions(sessions);
@@ -145,7 +175,9 @@ export const PanelPreview = () => {
       frame.style.height =
         autoHeight && panel !== null ? `${String(measurePanelContentHeight(panel))}px` : '';
     }
-  }, [autoHeight, scene, tall, glass, sessions, seen]);
+    // No dependency list, matching `useAutoPanelHeight`: the height also depends on state inside
+    // SetupView that nothing out here can see, so the only correct trigger is "after any commit".
+  });
 
   const onSelect = (session: Session) => {
     acknowledge(session);
@@ -178,9 +210,9 @@ export const PanelPreview = () => {
             );
           }}
         />
-        {scene === 'setup' ? (
+        {isSetup ? (
           <SetupView
-            setup={setupState}
+            setup={scene === 'setup-done' ? setupDone : setupTodo}
             health={{ failure: null, degraded: [] }}
             buildIdentity="v0.2.2 (a1b2c3d)"
             logPath="/Users/you/Library/Logs/claude-agents-widget/app.log"
@@ -255,7 +287,7 @@ export const PanelPreview = () => {
             )}
           </div>
         )}
-        {scene !== 'setup' && (
+        {!isSetup && (
           <>
             <PanelNotice
               message={

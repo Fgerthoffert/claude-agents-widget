@@ -55,6 +55,15 @@ npm run tauri dev
 - [ ] It never covers the menu bar, and never grows off the bottom of the screen.
 - [ ] Shrink the panel to two agents, then open **Setup / Diagnostics**: the window grows to fit
       the whole guide rather than scrolling it in 190px. Press Done: it shrinks back.
+- [ ] In Setup, press **Show the change**: the window grows to fit the JSON. Hide it again: it
+      shrinks back. (Nothing outside the setup view knows that button exists — the height is
+      re-measured after every render, not from a list of things that might have changed.)
+- [ ] Press **Install hooks** and let it report: the window grows by the outcome line.
+- [ ] With everything already installed and a precise click on record, both steps collapse to a
+      heading and a chip — and the window **shrinks** to match. This is the case that catches a
+      measurement which can only grow (ADR-0015).
+- [ ] The exact-change preview never makes the window taller than the screen: it is capped at
+      130px and scrolls inside itself.
 - [ ] Resize the width by dragging a side edge: the width sticks, and is still there after a
       restart. Auto height only ever touches the height.
 - [ ] Turn **Fit the height to the agents** off in Setup. Drag the bottom edge, quit, relaunch:

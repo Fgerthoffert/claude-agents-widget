@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useLayoutEffect, useRef } from 'react';
 
 import { clampPanelHeight } from '../core/clampPanelHeight';
 import { isTauri } from './isTauri';
@@ -11,9 +11,6 @@ import type { RefObject } from 'react';
  * panel — never a broken one.
  */
 const MIN_HEIGHT = 120;
-
-/** Give the browser a frame to lay the new rows out before asking how tall they are. */
-const SETTLE_MS = 16;
 
 export interface AutoPanelHeight {
   /** Attach to the panel's root element — the thing whose content is being measured. */
@@ -30,22 +27,32 @@ export interface AutoPanelHeight {
  * Width is never touched. The user picks it, it is persisted, and nothing here has an opinion
  * about it.
  *
- * `dependency` is a string the caller changes whenever the content might have — the section
- * counts, whether a notice is up, whether setup is open. A `ResizeObserver` was the alternative
- * and does not work here: every box that decides this panel's height is either stretched by flex
- * or clipped by `overflow`, so none of them changes size when the content inside them does.
+ * Measured **after every commit**, in a layout effect, and compared against the last measurement
+ * before anything async happens. Two alternatives were tried and rejected:
+ *
+ * - A `ResizeObserver` cannot see this at all: every box that decides the panel's height is
+ *   either stretched by flex or clipped by `overflow`, so none of them changes size when the
+ *   content inside it does. It would have looked right and fired never.
+ * - A dependency string naming everything that affects the height worked for the session list
+ *   and quietly failed for the setup view, whose height also depends on state this hook cannot
+ *   see: whether *Show the change* is expanded, whether an install has reported an outcome,
+ *   whether detection has started failing. Enumerating another component's internals is a list
+ *   that goes stale the first time someone adds a paragraph.
+ *
+ * So there is no list. A layout effect runs after React has written the DOM and before the
+ * browser paints, and reading `scrollHeight` there forces the layout to be current — so the
+ * measurement is always of what is actually on screen. The panel re-renders about once a second
+ * for the clock, and an unchanged measurement costs one DOM read and returns.
  *
  * Everything is best-effort. A failure to resize leaves the user with a window of the wrong
  * height, which is a great deal better than a panel that does not render.
  */
-export const useAutoPanelHeight = (enabled: boolean, dependency: string): AutoPanelHeight => {
+export const useAutoPanelHeight = (enabled: boolean): AutoPanelHeight => {
   const panelRef = useRef<HTMLElement | null>(null);
+  /** Last height measured, so a re-render that changed nothing does no work. */
+  const measured = useRef<number | null>(null);
 
-  const apply = useCallback(async (): Promise<void> => {
-    const panel = panelRef.current;
-    if (panel === null) return;
-
-    const contentHeight = measurePanelContentHeight(panel);
+  const apply = useCallback(async (contentHeight: number): Promise<void> => {
     const { getCurrentWindow, currentMonitor, PhysicalSize } =
       await import('@tauri-apps/api/window');
     const window = getCurrentWindow();
@@ -66,21 +73,25 @@ export const useAutoPanelHeight = (enabled: boolean, dependency: string): AutoPa
     if (height !== size.height) await window.setSize(new PhysicalSize(size.width, height));
   }, []);
 
-  useEffect(() => {
-    if (!enabled || !isTauri()) return;
+  useLayoutEffect(() => {
+    if (!enabled || !isTauri()) {
+      // Forget the last measurement, so re-enabling the setting resizes rather than deciding
+      // nothing has changed since it was switched off.
+      measured.current = null;
+      return;
+    }
 
-    // One frame's grace: React has committed the DOM but the browser may not have laid it out,
-    // and measuring mid-layout reports the height the panel had a moment ago.
-    const timer = setTimeout(() => {
-      apply().catch((error: unknown) => {
-        console.warn('could not fit the panel to its content', error);
-      });
-    }, SETTLE_MS);
+    const panel = panelRef.current;
+    if (panel === null) return;
 
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [enabled, dependency, apply]);
+    const contentHeight = measurePanelContentHeight(panel);
+    if (contentHeight === measured.current) return;
+    measured.current = contentHeight;
+
+    apply(contentHeight).catch((error: unknown) => {
+      console.warn('could not fit the panel to its content', error);
+    });
+  });
 
   return { panelRef };
 };

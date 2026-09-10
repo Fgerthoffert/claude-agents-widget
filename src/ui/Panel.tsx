@@ -44,9 +44,9 @@ import './panel.css';
  * row never moves under the user's cursor. An empty section renders nothing at all: vertical
  * space is the panel's scarcest resource and a heading over no rows spends it on an absence.
  *
- * The window fits itself to whatever is on screen (ADR-0015). This component owns the one string
- * that says when that might have changed — section counts, the notice, the setup view — because
- * it is the only place that knows all three.
+ * The window fits itself to whatever is on screen (ADR-0015) — including the setup view, which
+ * is why this component simply attaches a ref and lets the hook re-measure after every commit
+ * rather than trying to describe when the height might have changed.
  *
  * Exactly one row is ever loud, and clicking it makes it calm: this component owns the
  * acknowledgement map and hands `loudSessionId` the decision (ADR-0013). It also owns what
@@ -165,17 +165,7 @@ export const Panel = () => {
   // Auto-open only once the probe has really run, so the placeholder state never flashes it up.
   const setupOpen = showSetup || (setup.ready && setup.setup.needsSetup && !setupDismissed);
 
-  // Everything that changes how tall the panel wants to be, in one string. Section counts rather
-  // than the sessions themselves: a title changing does not change a row's height.
-  const heightSignature = [
-    setupOpen ? `setup:${setup.setup.hooks.status}:${setup.setup.permissions.status}` : 'list',
-    groups.running.length,
-    groups.waiting.length,
-    groups.done.length,
-    empty ? `empty:${health.failure ?? ''}` : '',
-    notice === null ? '' : 'notice',
-  ].join('/');
-  const { panelRef } = useAutoPanelHeight(settings.autoHeight && settingsReady, heightSignature);
+  const { panelRef } = useAutoPanelHeight(settings.autoHeight && settingsReady);
 
   return (
     <main className="panel" ref={panelRef} onMouseDown={onMouseDown} data-tauri-drag-region>
