@@ -1,11 +1,12 @@
 # CLAUDE.md
 
-macOS menu bar icon + always-on-top floating panel showing every local Claude Code session, with
-one-click focusing of the terminal window that owns it. Tauri 2, TypeScript-first.
+A desktop window onto Claude Code's Agent View: a macOS menu bar icon and an always-on-top panel
+over `claude agents --json`, plus the one thing Agent View cannot do — raise the window a session
+is running in. Tauri 2, TypeScript-first.
 
-Sessions come from `claude agents --json` — Claude Code's own answer about its own sessions
-(ADR-0018). The widget derives nothing about them except how long each state has held, and its
-one job that Agent View cannot do is raise the window a session already lives in.
+**This app owns no session logic.** Sessions, names and states are Claude Code's own answer
+(ADR-0018); the only thing derived here is how long each state has held. A change that starts to
+re-infer something the CLI reports is going the wrong way — check `claude agents --json` first.
 
 ## Architecture
 

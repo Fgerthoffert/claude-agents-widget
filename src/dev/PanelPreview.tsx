@@ -259,7 +259,7 @@ export const PanelPreview = () => {
                 setLastAction('Notice dismissed.');
               }}
             />
-            <PanelLegend />
+            <PanelLegend appVersion="v0.9.0 (a1b2c3d)" claudeVersion="2.1.236" />
           </>
         )}
       </main>

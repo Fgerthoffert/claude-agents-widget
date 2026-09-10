@@ -95,6 +95,17 @@ npm run tauri dev
 - [ ] Run two sessions in one terminal in turn (`/clear` between them): there is never more than
       one row for that terminal, even if `SessionEnd` never fires for the first.
 
+## The footer
+
+- [ ] Two lines: the duration key (`▶ processing time`, `⏸ inactive time`), then the versions.
+- [ ] The state glyphs are **not** keyed there any more — the section headings name them.
+- [ ] The widget version matches the build (`v0.9.0` on a release, `v0.9.0 (abc1234)` otherwise)
+      and agrees with the one in Setup / Diagnostics.
+- [ ] The Claude Code version matches `claude --version` in a terminal.
+- [ ] Rename `claude` on your PATH and relaunch: the widget version still shows and the Claude
+      one is simply absent — never `unknown`, never a guess.
+- [ ] Both are selectable, so they can be copied into a bug report.
+
 ## The session source (ADR-0018)
 
 - [ ] Run `claude agents --json` yourself. Every session it lists is a row in the panel, and

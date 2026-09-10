@@ -1,25 +1,42 @@
 # Claude Agents Widget
 
-A small always-on-top macOS panel that answers one question at a glance: **which of my agents is
-working, and which one is waiting for me?**
+**A desktop window onto [Claude Code's Agent View](https://code.claude.com/docs/en/agent-view),
+with one thing Agent View cannot do: click a session and land in the window it is running in.**
+
+Claude Code already knows what your agents are doing, and `claude agents --json` says so — every
+interactive and background session, its working directory, its name, and whether it is `busy`,
+`waiting` on you, or `idle`. This widget adds no opinion of its own. It reads that, and draws it
+where you can see it without leaving what you are doing.
+
+It answers one question at a glance: **which of my agents is working, and which one is waiting
+for me?**
 
 Agents get started from wherever you happen to be — a plain terminal, a VS Code or Cursor
-integrated terminal, Claude Desktop — and then you carry on with everything else: Slack, Chrome,
-a video call, actual code. The agents keep going in windows you can no longer see. Notifications do
-fire when one stops, but with five or ten agents they all look alike: you get a ping without
-knowing which agent sent it or where that window is. There is no single place that tells you who is
-running and who is blocked, and no quick way back to the right window.
+integrated terminal — and then you carry on with everything else: Slack, Chrome, a video call,
+actual code. The agents keep going in windows you can no longer see. Notifications do fire when
+one stops, but with five or ten agents they all look alike: you get a ping without knowing which
+agent sent it or where that window is.
 
-That is what this is: a menu bar icon that marks itself (`●`) the moment any agent is waiting on
-you, and a compact panel you can park on any monitor, above every other window. The panel is split
-into **Running** (the agent is busy, nothing is expected of you), **Waiting for you** (it asked
-something and cannot go on until you answer) and **Done** (it stopped, and is not blocked).
+`claude agents` answers the first half of that, in a full-terminal view you switch to and attach
+from. This is the other half:
 
-Clicking a row raises the terminal or editor window that agent lives in, and says so if it could
-not — it will never open a new window instead (ADR-0016). If macOS refused the click, the notice
-offers the one-click fix. However many agents are blocked, exactly one row is ever loud — the most recent one you have
-not been to yet — so the panel always has one answer to "what next" instead of a wall of
-highlights.
+- a **menu bar icon** that marks itself (`●`) the moment an agent is blocked on you;
+- an **always-on-top panel** you park on any monitor, sized to its contents, split into
+  **Running** (busy, nothing expected of you), **Waiting for you** (it asked something and cannot
+  go on until you answer) and **Done** (stopped, not blocked);
+- **click a row and the window that agent lives in comes forward** — the terminal tab, the editor
+  window. Agent View is explicit that it _"cannot programmatically switch focus to session's
+  terminal window"_; that is the gap this fills.
+
+However many agents are blocked, exactly one row is ever loud — the most recent one you have not
+been to yet — so there is always one answer to "what next" rather than a wall of highlights. A
+click that could not reach its window says so, and never opens a new one instead.
+
+**Not a reimplementation.** Earlier versions installed a hook into your `~/.claude/settings.json`,
+scanned the process table and parsed your transcripts to work all of this out. None of that is
+here any more: nearly every bug it ever had came from guessing at state Claude Code was willing to
+state plainly ([ADR-0018](docs/adr/0018-claude-code-is-the-source-of-truth.md)). The widget reads
+no files, writes none, and never touches your Claude Code configuration.
 
 <!-- Screenshot: add one here once the v0.1.0 build has been run on a real desktop. -->
 

@@ -21,6 +21,12 @@
       "identifier": "shell:allow-execute",
       "allow": [
         {
+          "comment": "The version of Claude Code the widget is reading, shown in the footer. Same login-shell lookup as the session list, and read once per launch.",
+          "name": "claude-version",
+          "cmd": "/bin/zsh",
+          "args": ["-lc", "claude --version"]
+        },
+        {
           "comment": "Claude Code's own session list. Run through a login shell because `claude` lives on the user's PATH (/opt/homebrew/bin, ~/.claude/local, a global npm prefix) and a GUI app inherits none of those. The arguments are fixed here, so nothing is interpolated into the shell.",
           "name": "claude-agents-json",
           "cmd": "/bin/zsh",

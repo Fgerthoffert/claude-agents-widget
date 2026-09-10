@@ -67,10 +67,19 @@ describe('detection capabilities', () => {
 
   it('fixes those arguments, so nothing is interpolated into a shell', () => {
     // The whole risk of shelling out through `zsh -lc` is an argument that is not a constant.
-    const args = command('claude-agents-json')?.args;
+    for (const name of ['claude-agents-json', 'claude-version']) {
+      const args = command(name)?.args;
 
-    expect(Array.isArray(args)).toBe(true);
-    expect((args as readonly unknown[]).every((arg) => typeof arg === 'string')).toBe(true);
+      expect(Array.isArray(args)).toBe(true);
+      expect((args as readonly unknown[]).every((arg) => typeof arg === 'string')).toBe(true);
+    }
+  });
+
+  it('allowlists the version lookup the footer shows', () => {
+    // The footer names both versions, because the widget is a view over a CLI as much as an app
+    // and "which widget, which Claude" is the first question about odd behaviour (ADR-0018).
+    expect(command('claude-version')?.cmd).toBe('/bin/zsh');
+    expect(command('claude-version')?.args).toEqual(['-lc', 'claude --version']);
   });
 
   it('allowlists `ps` with exactly the arguments the focus engine passes', () => {
