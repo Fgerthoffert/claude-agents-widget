@@ -18,6 +18,7 @@ import { showPanel } from './showPanel';
 import { togglePanelVisibility } from './togglePanelVisibility';
 import { useAcknowledged } from './useAcknowledged';
 import { useAppVersion } from './useAppVersion';
+import { useClaudeVersion } from './useClaudeVersion';
 import { useAutoPanelHeight } from './useAutoPanelHeight';
 import { useHomeDir } from './useHomeDir';
 import { useLogPath } from './useLogPath';
@@ -68,6 +69,7 @@ export const Panel = () => {
   const nowMs = useNowMs();
   const home = useHomeDir();
   const buildIdentity = useAppVersion();
+  const claudeVersion = useClaudeVersion();
   const logPath = useLogPath();
   const [lastFocus, setLastFocus] = useState<LastFocusOutcome | null>(null);
   const [showSetup, setShowSetup] = useState(false);
@@ -225,7 +227,7 @@ export const Panel = () => {
             }
             onDismiss={handleDismissNotice}
           />
-          <PanelLegend />
+          <PanelLegend appVersion={buildIdentity} claudeVersion={claudeVersion} />
         </>
       )}
     </main>

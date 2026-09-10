@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   health: { current: { failure: null as string | null, degraded: [] as string[] } },
   onSessionClick: vi.fn(),
   togglePanelVisibility: vi.fn(),
+  appVersion: { current: null as string | null },
+  claudeVersion: { current: null as string | null },
 }));
 
 // A fake store: the panel reads the same hook it does in production, we choose what it returns.
@@ -21,6 +23,9 @@ vi.mock('./useSessions', () => ({
 vi.mock('./onSessionClick', () => ({ onSessionClick: mocks.onSessionClick }));
 vi.mock('./togglePanelVisibility', () => ({ togglePanelVisibility: mocks.togglePanelVisibility }));
 vi.mock('./startWindowDrag', () => ({ startWindowDrag: vi.fn(() => Promise.resolve()) }));
+// Both are native reads that answer `null` in jsdom; the footer renders them, so tests choose.
+vi.mock('./useAppVersion', () => ({ useAppVersion: () => mocks.appVersion.current }));
+vi.mock('./useClaudeVersion', () => ({ useClaudeVersion: () => mocks.claudeVersion.current }));
 
 /** Fixtures age against the real clock, because `useNowMs` reads it. */
 const NOW = Date.now();
@@ -47,6 +52,8 @@ beforeEach(() => {
     detail: 'window',
   });
   mocks.togglePanelVisibility.mockReset();
+  mocks.appVersion.current = 'v9.9.9';
+  mocks.claudeVersion.current = '9.9.9';
 });
 
 // Only the ageing test fakes time: `user-event` drives its own microtask queue and deadlocks
@@ -421,24 +428,40 @@ describe('Panel', () => {
     expect(screen.getByRole('banner').textContent).not.toMatch(/\d/);
   });
 
-  it('explains every glyph it uses in the legend', () => {
+  it('explains the two duration icons, which the layout cannot', () => {
     renderPanel([session({ sessionId: 'a', title: 'Busy' })]);
 
     const legend = screen.getByRole('contentinfo');
-    for (const label of [
-      'needs an answer',
-      'working',
-      'done',
-      'processing time',
-      'inactive time',
-    ]) {
+    for (const label of ['processing time', 'inactive time']) {
       expect(legend.textContent).toContain(label);
     }
-    for (const glyph of ['✋', '🔄', '✅', '▶', '⏸']) {
+    for (const glyph of ['▶', '⏸']) {
       expect(legend.textContent).toContain(glyph);
     }
-    // Ended sessions are never rendered, so the legend must not advertise them.
-    expect(legend.textContent).not.toContain('ended');
+  });
+
+  it('no longer keys the state glyphs, which the section headings already name', () => {
+    renderPanel([session({ sessionId: 'a', title: 'Busy' })]);
+
+    const legend = screen.getByRole('contentinfo');
+    for (const label of ['needs an answer', 'working', 'done']) {
+      expect(legend.textContent).not.toContain(label);
+    }
+  });
+
+  it('names both versions, because it is a view over a CLI as much as an app', () => {
+    // "Which widget, which Claude" is the first question about any odd behaviour, and this is
+    // where a bug report can read both off without opening diagnostics (ADR-0018).
+    renderPanel([session({ sessionId: 'a', title: 'Busy' })]);
+
+    expect(screen.getByRole('contentinfo').textContent).toContain('Claude Code 9.9.9');
+  });
+
+  it('omits a version it could not read rather than guessing at one', () => {
+    mocks.claudeVersion.current = null;
+    renderPanel([session({ sessionId: 'a', title: 'Busy' })]);
+
+    expect(screen.getByRole('contentinfo').textContent).not.toContain('Claude Code');
   });
 
   it('distinguishes time spent working from time spent idle', () => {

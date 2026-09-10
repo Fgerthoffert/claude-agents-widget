@@ -720,6 +720,16 @@ body {
   white-space: nowrap;
 }
 
+/* The versions are reference, not instruction: quieter than the icon key above them, and
+   monospaced so a version read off the screen into a bug report is unambiguous. */
+.panel__legend-line--versions {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 8.5px;
+  opacity: 0.72;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 .panel__legend-item--active {
   font-weight: 600;
   color: var(--state-working);
