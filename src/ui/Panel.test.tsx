@@ -369,6 +369,32 @@ describe('Panel', () => {
     expect(mocks.onSessionClick).toHaveBeenCalledTimes(1);
   });
 
+  it('separates a settled session into its own dimmed section', () => {
+    renderPanel([
+      session({ sessionId: 'a', title: 'Just finished', state: 'done_idle' }),
+      session({ sessionId: 'b', title: 'Cleared', state: 'dormant' }),
+    ]);
+
+    expect(screen.getByRole('region', { name: 'Done' }).textContent).toContain('Just finished');
+    const idle = screen.getByRole('region', { name: 'Idle' });
+    expect(idle.textContent).toContain('Cleared');
+    expect(rowByName(/^Cleared/)).toHaveClass('row--dormant');
+    expect(rowByName(/^Just finished/)).not.toHaveClass('row--dormant');
+  });
+
+  it('omits the Idle section when nothing has settled', () => {
+    renderPanel([session({ sessionId: 'a', title: 'Just finished', state: 'done_idle' })]);
+
+    expect(screen.queryByRole('region', { name: 'Idle' })).not.toBeInTheDocument();
+  });
+
+  it('never shouts about a settled session', () => {
+    renderPanel([session({ sessionId: 'a', title: 'Cleared', state: 'dormant' })]);
+
+    expect(rowByName(/^Cleared/)).not.toHaveClass('row--loud');
+    expect(rowByName(/^Cleared/)).not.toHaveClass('row--blocked');
+  });
+
   it('says the machine is quiet, with nothing to install', () => {
     renderPanel([]);
 

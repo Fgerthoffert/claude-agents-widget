@@ -1,11 +1,14 @@
+import { settleSession } from '../core/settleSession';
 import type { Session } from '../core/types';
 
 /** Preview scenarios, chosen to cover the judgement calls the panel design has to survive. */
 export type MockScenario = 'typical' | 'busy' | 'quiet' | 'blocked' | 'empty';
 
 interface Seed {
+  /** `null` is the cleared / never-used case: Claude Code has generated no name (ADR-0019). */
   readonly title: string | null;
   readonly cwd: string;
+  /** What Claude Code reported. `dormant` is never seeded — it is derived, like in the app. */
   readonly state: Session['state'];
   /** Seconds spent in the current state. */
   readonly ageSeconds: number;
@@ -46,6 +49,18 @@ const seeds: Readonly<Record<Exclude<MockScenario, 'empty'>, readonly Seed[]>> =
       cwd: '/Users/you/Documents/notes',
       state: 'done_idle',
       ageSeconds: 640,
+    },
+    {
+      title: null,
+      cwd: '/Users/you/GitHub/scratch-pad',
+      state: 'done_idle',
+      ageSeconds: 40,
+    },
+    {
+      title: 'Bump the Rust toolchain',
+      cwd: '/Users/you/GitHub/toolchain',
+      state: 'done_idle',
+      ageSeconds: 4 * 60 * 60,
     },
   ],
   busy: [
@@ -151,15 +166,27 @@ const seeds: Readonly<Record<Exclude<MockScenario, 'empty'>, readonly Seed[]>> =
 export const buildMockSessions = (scenario: MockScenario, nowMs: number): readonly Session[] => {
   if (scenario === 'empty') return [];
 
-  return seeds[scenario].map((seed, index) => ({
-    sessionId: `preview-${scenario}-${String(index)}`,
-    title: seed.title,
-    cwd: seed.cwd,
-    state: seed.state,
-    kind: seed.kind ?? 'interactive',
-    waitingFor: seed.waitingFor ?? null,
-    claudePid: 4300 + index,
-    startedAtMs: nowMs - (seed.ageSeconds + 600) * 1000,
-    stateSince: nowMs - seed.ageSeconds * 1000,
-  }));
+  return seeds[scenario].map((seed, index) => {
+    const stateSince = nowMs - seed.ageSeconds * 1000;
+
+    return {
+      sessionId: `preview-${scenario}-${String(index)}`,
+      title: seed.title,
+      cwd: seed.cwd,
+      // Through the real rule, not hard-coded: a seed says what Claude Code reported, and
+      // whether that settles into `dormant` is `settleSession`'s call, exactly as in the app
+      // (ADR-0019). Setting the state directly is how the harness came to show a four-hour-old
+      // session under "Done".
+      state: settleSession({
+        state: seed.state,
+        title: seed.title,
+        heldMs: nowMs - stateSince,
+      }),
+      kind: seed.kind ?? 'interactive',
+      waitingFor: seed.waitingFor ?? null,
+      claudePid: 4300 + index,
+      startedAtMs: nowMs - (seed.ageSeconds + 600) * 1000,
+      stateSince,
+    };
+  });
 };

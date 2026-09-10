@@ -18,6 +18,7 @@ const stateLabels: Readonly<Record<SessionState, string>> = {
   needs_input: 'needs input',
   working: 'working',
   done_idle: 'done',
+  dormant: 'idle',
   ended: 'ended',
 };
 

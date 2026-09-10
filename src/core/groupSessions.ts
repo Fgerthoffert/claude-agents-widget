@@ -1,14 +1,16 @@
 import { visibleSessions } from './visibleSessions';
 import type { Session } from './types';
 
-/** The panel's three sections: under way, blocked on the user, and finished. */
+/** The panel's four sections: under way, blocked, just finished, and settled. */
 export interface SessionGroups {
   /** The agent is processing; nothing is expected of the user. */
   readonly running: readonly Session[];
   /** Blocked on an answer and unable to proceed without one. */
   readonly waiting: readonly Session[];
-  /** Stopped, and not blocked: a finished turn, or a fresh prompt nobody has typed into yet. */
+  /** Stopped, not blocked, and recent enough to be worth reading. */
   readonly done: readonly Session[];
+  /** Cleared, or finished long enough ago that there is nothing to do about it (ADR-0019). */
+  readonly idle: readonly Session[];
 }
 
 /**
@@ -27,6 +29,10 @@ export interface SessionGroups {
  * own `status` and `waitingFor` (ADR-0018) — an idle session is never `needs_input` to begin
  * with, so there is nothing to special-case here.
  *
+ * **Done** splits again into two, because it was doing two jobs: a session that finished a
+ * minute ago is something to go and read, and one that was cleared or finished an hour ago is
+ * furniture. `settleSession` decides which, and the second lands in **Idle** (ADR-0019).
+ *
  * `ended` sessions are dropped entirely. Store order is preserved inside each group, so rows
  * never move under the cursor.
  */
@@ -37,5 +43,6 @@ export const groupSessions = (sessions: readonly Session[]): SessionGroups => {
     running: visible.filter((session) => session.state === 'working'),
     waiting: visible.filter((session) => session.state === 'needs_input'),
     done: visible.filter((session) => session.state === 'done_idle'),
+    idle: visible.filter((session) => session.state === 'dormant'),
   };
 };

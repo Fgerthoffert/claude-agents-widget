@@ -30,6 +30,7 @@ const glyphs: Readonly<Record<SessionState, string>> = {
   needs_input: '⏸',
   working: '▶',
   done_idle: '✔',
+  dormant: '·',
   ended: '·',
 };
 
@@ -42,6 +43,7 @@ const summarise = (sessions: readonly Session[]): string => {
     counts.needsInput > 0 ? `${String(counts.needsInput)} need input` : null,
     counts.working > 0 ? `${String(counts.working)} working` : null,
     counts.doneIdle > 0 ? `${String(counts.doneIdle)} done` : null,
+    counts.dormant > 0 ? `${String(counts.dormant)} idle` : null,
   ].filter((part) => part !== null);
 
   return parts.length > 0 ? parts.join(' · ') : 'No active sessions';

@@ -1,7 +1,14 @@
 // The one multi-export module in src/core (see CLAUDE.md): shared shapes, no behaviour.
 
-/** PRD state model. `ended` only reaches the store for a background session that was stopped. */
-export type SessionState = 'working' | 'needs_input' | 'done_idle' | 'ended';
+/**
+ * What the panel says about a session.
+ *
+ * The first three come straight from Claude Code's `status` (ADR-0018). `dormant` is the widget's
+ * own reading of a finished session that has stopped being worth a look — cleared, or done long
+ * enough ago (ADR-0019). `ended` only reaches the store for a background job the supervisor has
+ * recorded as stopped, and is never rendered.
+ */
+export type SessionState = 'working' | 'needs_input' | 'done_idle' | 'dormant' | 'ended';
 
 /** How the session was started: attached to a terminal, or dispatched to the supervisor. */
 export type SessionKind = 'interactive' | 'background';

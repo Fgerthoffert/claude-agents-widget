@@ -1,7 +1,7 @@
 {
   "name": "claude-agents-widget",
   "private": true,
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Always-on-top macOS panel over `claude agents --json` \u2014 every Claude Code session at a glance, and one click to the window it runs in.",
   "license": "Apache-2.0",
   "type": "module",

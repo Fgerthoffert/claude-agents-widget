@@ -23,7 +23,8 @@ from. This is the other half:
 - a **menu bar icon** that marks itself (`●`) the moment an agent is blocked on you;
 - an **always-on-top panel** you park on any monitor, sized to its contents, split into
   **Running** (busy, nothing expected of you), **Waiting for you** (it asked something and cannot
-  go on until you answer) and **Done** (stopped, not blocked);
+  go on until you answer), **Done** (finished recently — go and read it) and **Idle** (cleared,
+  or finished long enough ago that there is nothing to do about it — dimmed, still clickable);
 - **click a row and the window that agent lives in comes forward** — the terminal tab, the editor
   window. Agent View is explicit that it _"cannot programmatically switch focus to session's
   terminal window"_; that is the gap this fills.

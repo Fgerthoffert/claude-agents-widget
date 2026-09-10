@@ -1,12 +1,25 @@
-import type { Session, SessionSnapshot } from './types';
+import { settleSession } from './settleSession';
+import type { Session, SessionSnapshot, SessionState } from './types';
 
-/** Attention order: what needs the user comes first, what is finished comes last. */
-const stateRank: Readonly<Record<Session['state'], number>> = {
+/** Attention order: what needs the user comes first, what needs nothing comes last. */
+const stateRank: Readonly<Record<SessionState, number>> = {
   needs_input: 0,
   working: 1,
   done_idle: 2,
-  ended: 3,
+  dormant: 3,
+  ended: 4,
 };
+
+/**
+ * The state as Claude Code reported it, recovered from what the store is holding.
+ *
+ * `dormant` is the widget's own reading of `done_idle` (ADR-0019), so comparing a stored
+ * `dormant` against a fresh `done_idle` snapshot would look like a state *change* and re-stamp
+ * the clock — which would put the session back under thirty minutes, un-settle it, and flip it
+ * between the two sections on every poll. Normalising here is what stops that loop.
+ */
+const asReported = (state: SessionState | undefined): SessionState | undefined =>
+  state === 'dormant' ? 'done_idle' : state;
 
 /**
  * Stamps each snapshot with when its state began, carrying the stamp over while it holds, and
@@ -24,6 +37,10 @@ const stateRank: Readonly<Record<Session['state'], number>> = {
  * bug in the old scanner path, where each sweep re-stamped what it found and the age never got
  * past a few seconds (ADR-0008 hid it by showing no age at all for those rows).
  *
+ * The stamp is also what decides when a finished session stops being worth a look, so
+ * `settleSession` is applied here rather than in the panel: it needs the duration, and this is
+ * the only place that knows it (ADR-0019).
+ *
  * Pure, and given the previous list rather than holding state, so the store stays the only thing
  * with a memory.
  */
@@ -37,9 +54,15 @@ export const carryStateSince = (
   return snapshots
     .map((snapshot) => {
       const last = before.get(snapshot.sessionId);
-      const held = last?.state === snapshot.state ? last.stateSince : nowMs;
+      const held = last !== undefined && asReported(last.state) === snapshot.state;
+      const stateSince = held ? last.stateSince : nowMs;
+      const state = settleSession({
+        state: snapshot.state,
+        title: snapshot.title,
+        heldMs: nowMs - stateSince,
+      });
 
-      return { ...snapshot, stateSince: held };
+      return { ...snapshot, state, stateSince };
     })
     .sort(
       (a, b) =>
