@@ -399,7 +399,13 @@ describe('Panel', () => {
     renderPanel([session({ sessionId: 'a', title: 'Busy' })]);
 
     const legend = screen.getByRole('contentinfo');
-    for (const label of ['needs an answer', 'working', 'done', 'processing time', 'inactive time']) {
+    for (const label of [
+      'needs an answer',
+      'working',
+      'done',
+      'processing time',
+      'inactive time',
+    ]) {
       expect(legend.textContent).toContain(label);
     }
     for (const glyph of ['✋', '🔄', '✅', '▶', '⏸']) {

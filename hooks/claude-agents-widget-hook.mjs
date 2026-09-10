@@ -215,6 +215,19 @@ const writeAtomic = (file, record) => {
 };
 
 /**
+ * The session state files, or `null` when the directory cannot be read at all.
+ * @param {string} dir
+ * @returns {string[] | null}
+ */
+const listSessionFiles = (dir) => {
+  try {
+    return readdirSync(dir);
+  } catch {
+    return null;
+  }
+};
+
+/**
  * Retires every other session recorded against this same `claude` process.
  *
  * One CLI process runs one session at a time (ADR-0012), so a `SessionStart` naming a new
@@ -231,13 +244,8 @@ const writeAtomic = (file, record) => {
  * @param {number} claudePid
  */
 const retireOtherSessions = (sessionsDir, currentSessionId, claudePid) => {
-  /** @type {string[]} */
-  let names = [];
-  try {
-    names = readdirSync(sessionsDir);
-  } catch {
-    return;
-  }
+  const names = listSessionFiles(sessionsDir);
+  if (names === null) return;
 
   for (const name of names) {
     if (!name.endsWith('.json') || name === `${currentSessionId}.json`) continue;

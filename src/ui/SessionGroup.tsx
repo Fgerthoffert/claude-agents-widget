@@ -28,9 +28,9 @@ interface SessionGroupProps {
  * others off screen. The caller omits empty groups rather than rendering a heading over nothing,
  * which would spend the panel's scarcest resource (vertical space) on the absence of work — the
  * property that keeps a third section from crowding the panel. The heading counts its rows: the
- * count belongs next to what it
- * counts, not in a header above everything (ADR-0008). `aria-label` gives the section a name, so
- * a screen reader announces which half of the panel it has moved into.
+ * count belongs next to what it counts, not in a header above everything (ADR-0008).
+ * `aria-label` gives the section a name, so a screen reader announces which part of the panel it
+ * has moved into.
  */
 export const SessionGroup = ({
   label,

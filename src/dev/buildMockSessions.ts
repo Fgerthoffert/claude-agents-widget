@@ -73,7 +73,7 @@ const seeds: Readonly<Record<Exclude<MockScenario, 'empty'>, readonly Seed[]>> =
       cwd: '/Users/you/GitHub/platform-monorepo/packages/accounts',
       state: 'needs_input',
       ageSeconds: 17,
-      notificationType: 'idle_prompt',
+      notificationType: 'agent_needs_input',
     },
     {
       title: 'Add OpenTelemetry spans',

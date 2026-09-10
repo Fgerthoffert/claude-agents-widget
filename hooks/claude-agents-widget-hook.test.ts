@@ -224,17 +224,17 @@ describe('claude-agents-widget-hook', () => {
 
     it('retires on resume, fork and a plain startup that reuses a pid', () => {
       for (const source of ['resume', 'fork', 'startup']) {
-        runHooksInOneClaude(event(`old-${source}`, 'UserPromptSubmit'), start(`new-${source}`, source));
+        runHooksInOneClaude(
+          event(`old-${source}`, 'UserPromptSubmit'),
+          start(`new-${source}`, source),
+        );
 
         expect(readRecord(`old-${source}`)).toMatchObject({ state: 'ended' });
       }
     });
 
     it('retires nothing on compact: the session is still going', () => {
-      runHooksInOneClaude(
-        event('other', 'UserPromptSubmit'),
-        start('compacting', 'compact'),
-      );
+      runHooksInOneClaude(event('other', 'UserPromptSubmit'), start('compacting', 'compact'));
 
       expect(readRecord('other')).toMatchObject({ state: 'working' });
     });

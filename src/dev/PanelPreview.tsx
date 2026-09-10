@@ -184,7 +184,9 @@ export const PanelPreview = () => {
               selectScene('typical');
             }}
           />
-        ) : groups.running.length === 0 && groups.waiting.length === 0 ? (
+        ) : groups.running.length === 0 &&
+          groups.waiting.length === 0 &&
+          groups.done.length === 0 ? (
           <EmptyState
             hooksInstalled={false}
             failure={null}
@@ -215,7 +217,17 @@ export const PanelPreview = () => {
               <SessionGroup
                 label="Waiting for you"
                 rows={toRows(groups.waiting)}
-                attention={groups.waiting.some((session) => session.state === 'needs_input')}
+                attention
+                loudSessionId={loud}
+                pendingSessionId={null}
+                onSelect={onSelect}
+              />
+            )}
+            {groups.done.length > 0 && (
+              <SessionGroup
+                label="Done"
+                rows={toRows(groups.done)}
+                attention={false}
                 loudSessionId={loud}
                 pendingSessionId={null}
                 onSelect={onSelect}
