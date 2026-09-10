@@ -7,11 +7,12 @@ describe('formatTrayLabel', () => {
     expect(formatTrayLabel({ working: 0, needsInput: 1, doneIdle: 0 })).toBe('●');
   });
 
-  it('marks the menu bar when a session is done and unread', () => {
-    expect(formatTrayLabel({ working: 0, needsInput: 0, doneIdle: 1 })).toBe('●');
+  it('stays quiet for a finished agent: the menu bar must not shout about work that is done', () => {
+    expect(formatTrayLabel({ working: 0, needsInput: 0, doneIdle: 1 })).toBe('');
+    expect(formatTrayLabel({ working: 1, needsInput: 0, doneIdle: 9 })).toBe('');
   });
 
-  it('carries no count, however many sessions are waiting', () => {
+  it('carries no count, however many sessions are blocked', () => {
     expect(formatTrayLabel({ working: 2, needsInput: 4, doneIdle: 7 })).toBe('●');
   });
 

@@ -12,8 +12,8 @@ running and who is blocked, and no quick way back to the right window.
 
 That is what this is: a menu bar icon that marks itself (`●`) the moment any agent is waiting on
 you, and a compact panel you can park on any monitor, above every other window. The panel is split
-into **Running** (the agent is busy, nothing is expected of you) and **Waiting for you** (it
-stopped — either it needs a decision or it finished).
+into **Running** (the agent is busy, nothing is expected of you), **Waiting for you** (it asked
+something and cannot go on until you answer) and **Done** (it stopped, and is not blocked).
 
 Clicking a row raises the terminal or editor window that agent lives in, and says so if it could
 not. However many agents are blocked, exactly one row is ever loud — the most recent one you have
@@ -86,11 +86,12 @@ One 32px row per session: a state emoji, the **session name** (Claude Code's own
 user-set title, falling back to the project directory), the shortened path, and how long it has
 been in its current state. A legend at the bottom explains the glyphs.
 
-- ✋ needs you · 🔄 working · ✅ done
+- 🔄 working · ✋ needs an answer · ✅ done
 - `▶` counts how long the current turn has been processing; `⏸` counts how long nothing has
   happened. Same number, opposite meanings, so they are drawn differently.
-- `needs input` is the only row that raises its voice — amber accent, tint and a slow pulse
-  (suppressed under `prefers-reduced-motion`).
+- Every blocked row is marked with an amber accent; **one** raises its voice — the most recent
+  one you have not been to — with a tint and a slow pulse (suppressed under
+  `prefers-reduced-motion`). Going to a session calms it until that agent does something new.
 
 The panel floats above all windows on every space, is dragged by its background or header, and
 remembers its position and size across restarts — clamped back onto an attached display if the

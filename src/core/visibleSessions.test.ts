@@ -29,6 +29,16 @@ describe('visibleSessions', () => {
     expect(kept.map((s) => s.sessionId)).toEqual(['busy', 'blocked', 'done']);
   });
 
+  it('hides an `ended` session the instant it is ended, with no grace period', () => {
+    // The 5-minute TTL in `reconcileSessions` governs only how long the record stays in the
+    // *store* (diagnostics read it, and it is how a session leaves at all). It is emphatically
+    // not something the user waits out: a cleared session's row is gone on the next sweep
+    // (ADR-0014).
+    const justEnded = { ...session('cleared', 'ended'), updatedAt: new Date().toISOString() };
+
+    expect(visibleSessions([justEnded])).toEqual([]);
+  });
+
   it('passes an empty list through', () => {
     expect(visibleSessions([])).toEqual([]);
   });

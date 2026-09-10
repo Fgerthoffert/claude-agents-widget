@@ -22,12 +22,15 @@ const stateLabels: Readonly<Record<SessionState, string>> = {
 };
 
 /**
- * Known `Notification` matchers (ADR-0006). An unknown type still says something useful
+ * Known blocking `Notification` matchers (ADR-0006). An unknown type still says something useful
  * rather than nothing: Claude Code has added matchers before and will again.
+ *
+ * `idle_prompt` is absent: it no longer produces a `needs_input` session at all, because being
+ * idle blocks nothing (ADR-0014). A record written by an older installed hook script can still
+ * carry that pairing, and falls through to the generic wording until the session restarts.
  */
 const notificationReasons: Readonly<Record<string, string>> = {
   permission_prompt: 'needs permission',
-  idle_prompt: 'waiting for you',
   agent_needs_input: 'agent needs input',
 };
 

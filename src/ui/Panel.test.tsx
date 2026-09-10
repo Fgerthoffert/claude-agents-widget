@@ -234,7 +234,7 @@ describe('Panel', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
   });
 
-  it('splits the panel into what is running and what is on the user', () => {
+  it('splits the panel into running, blocked on the user, and done', () => {
     renderPanel([
       session({ sessionId: 'a', title: 'Blocked', state: 'needs_input' }),
       session({ sessionId: 'b', title: 'Busy' }),
@@ -242,18 +242,41 @@ describe('Panel', () => {
     ]);
 
     const sections = screen.getAllByRole('region');
-    expect(sections).toHaveLength(2);
+    expect(sections).toHaveLength(3);
 
-    const [running, waiting] = sections;
+    const [running, waiting, done] = sections;
     expect(running?.querySelector('.group__heading')?.textContent).toBe('Running1');
     expect(
       [...(running?.querySelectorAll('.row__title') ?? [])].map((node) => node.textContent),
     ).toEqual(['Busy']);
 
-    expect(waiting?.querySelector('.group__heading')?.textContent).toBe('Waiting for you2');
+    // Only the genuinely blocked session, which is what the heading claims (ADR-0014).
+    expect(waiting?.querySelector('.group__heading')?.textContent).toBe('Waiting for you1');
     expect(
       [...(waiting?.querySelectorAll('.row__title') ?? [])].map((node) => node.textContent),
-    ).toEqual(['Blocked', 'Finished']);
+    ).toEqual(['Blocked']);
+
+    expect(done?.querySelector('.group__heading')?.textContent).toBe('Done1');
+    expect(
+      [...(done?.querySelectorAll('.row__title') ?? [])].map((node) => node.textContent),
+    ).toEqual(['Finished']);
+  });
+
+  it('omits a section with nothing in it rather than heading an absence', () => {
+    renderPanel([session({ sessionId: 'a', title: 'Finished', state: 'done_idle' })]);
+
+    const sections = screen.getAllByRole('region');
+    expect(sections).toHaveLength(1);
+    expect(sections[0]?.querySelector('.group__heading')?.textContent).toBe('Done1');
+    expect(screen.queryByText('Waiting for you')).not.toBeInTheDocument();
+    expect(screen.queryByText('Running')).not.toBeInTheDocument();
+  });
+
+  it('shows a finished session as a row rather than as an empty panel', () => {
+    renderPanel([session({ sessionId: 'a', title: 'Finished', state: 'done_idle' })]);
+
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    expect(screen.queryByText('No agents running right now.')).not.toBeInTheDocument();
   });
 
   it('omits a section that has nothing in it rather than heading an empty list', () => {
@@ -376,7 +399,13 @@ describe('Panel', () => {
     renderPanel([session({ sessionId: 'a', title: 'Busy' })]);
 
     const legend = screen.getByRole('contentinfo');
-    for (const label of ['needs you', 'working', 'done', 'processing time', 'inactive time']) {
+    for (const label of [
+      'needs an answer',
+      'working',
+      'done',
+      'processing time',
+      'inactive time',
+    ]) {
       expect(legend.textContent).toContain(label);
     }
     for (const glyph of ['✋', '🔄', '✅', '▶', '⏸']) {

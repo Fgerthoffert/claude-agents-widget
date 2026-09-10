@@ -22,14 +22,15 @@ interface SessionGroupProps {
 }
 
 /**
- * A labelled section of the panel — "running" or "waiting for you".
+ * A labelled section of the panel — "Running", "Waiting for you" or "Done".
  *
- * Each section scrolls on its own and is sized by its content up to half the list area, so one
- * long group cannot push the other off screen. The caller omits empty groups rather than
- * rendering a heading over nothing, which would spend the panel's scarcest resource (vertical
- * space) on the absence of work. The heading counts its rows: the count belongs next to what it
- * counts, not in a header above everything (ADR-0008). `aria-label` gives the section a name, so
- * a screen reader announces which half of the panel it has moved into.
+ * Each section scrolls on its own and is sized by its content, so one long group cannot push the
+ * others off screen. The caller omits empty groups rather than rendering a heading over nothing,
+ * which would spend the panel's scarcest resource (vertical space) on the absence of work — the
+ * property that keeps a third section from crowding the panel. The heading counts its rows: the
+ * count belongs next to what it counts, not in a header above everything (ADR-0008).
+ * `aria-label` gives the section a name, so a screen reader announces which part of the panel it
+ * has moved into.
  */
 export const SessionGroup = ({
   label,

@@ -7,7 +7,16 @@ import tseslint from 'typescript-eslint';
 // The "one exported function per file" rule is convention (see CLAUDE.md), not lint-enforced.
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'coverage/**', 'src-tauri/target/**', 'src-tauri/gen/**'],
+    // `.claude/worktrees/**` holds git worktrees of this same repository, so without this every
+    // file is linted once per worktree and a stale checkout reports errors against paths that
+    // are not part of the tree being worked on.
+    ignores: [
+      'dist/**',
+      'coverage/**',
+      'src-tauri/target/**',
+      'src-tauri/gen/**',
+      '.claude/worktrees/**',
+    ],
   },
   js.configs.recommended,
   tseslint.configs.strictTypeChecked,

@@ -54,6 +54,22 @@ npm run tauri dev
 - [ ] Park it deliberately hanging off the bottom edge (about a third visible), quit, relaunch:
       that position is preserved (still ≥60% visible is left alone).
 
+## The three sections (ADR-0014)
+
+- [ ] **Waiting for you** holds only sessions blocked on an answer. A session that merely finished
+      its turn is under **Done**, never under Waiting.
+- [ ] Leave a session untouched until Claude Code fires its idle notification: it lands in
+      **Done**, not in Waiting. Being idle blocks nothing.
+- [ ] With all three populated, the panel shows Running, then Waiting for you, then Done — and
+      each scrolls independently without squeezing the others out.
+- [ ] An empty section is absent entirely, heading and all.
+- [ ] `/clear` a session: the old row disappears and the replacement appears under **Done**, not
+      under Running. It must not claim to be working before you have typed anything.
+- [ ] Same for `/resume` and starting a fresh `claude`: the new session arrives idle.
+- [ ] `/compact` does **not** create a second row — compaction keeps the same session going.
+- [ ] Run two sessions in one terminal in turn (`/clear` between them): there is never more than
+      one row for that terminal, even if `SessionEnd` never fires for the first.
+
 ## Legibility at scale
 
 - [ ] Ten concurrent sessions: every row shows a **name**, not a path or an id. Scroll works, the
@@ -74,8 +90,9 @@ npm run tauri dev
 - [ ] A session with a very long title truncates with an ellipsis on one line; hovering shows the
       full title, notification message and path.
 - [ ] A session with no title yet shows the project directory name instead.
-- [ ] `needs_input` rows read `needs permission` / `waiting for you` before the path, matching what
-      the terminal is actually asking.
+- [ ] `needs_input` rows read `needs permission` / `agent needs input` before the path, matching
+      what the terminal is actually asking. `waiting for you` is gone: an idle session is no
+      longer `needs_input` at all (ADR-0014).
 - [ ] Ages count up once a second and are single-unit (`12s` → `59s` → `1m` → `4m`).
 - [ ] A scanner-discovered session (start a session, then `npm run install-hooks` was never run,
       or kill the hook dir) shows no age rather than a fake one.
@@ -105,10 +122,13 @@ npm run tauri dev
 
 ## Tray
 
-- [ ] The menu bar shows `●` within a second or two of a session stopping (needing input or
-      finishing), and clears again within a second or two of it going back to work.
-- [ ] It carries no number, whether one session is waiting or ten.
-- [ ] With nothing waiting — nothing running at all, or everything mid-turn — it is icon only.
+- [ ] The menu bar shows `●` within a second or two of a session becoming **blocked**, and clears
+      again within a second or two of it being answered.
+- [ ] A session that merely **finishes** does not raise the mark (ADR-0014). Only a real question
+      does — otherwise the mark is usually noise and stops being read.
+- [ ] It carries no number, whether one session is blocked or ten.
+- [ ] With nothing blocked — nothing running, everything mid-turn, or everything simply done — it
+      is icon only.
 - [ ] The dropdown opens with the summary in words, then the sessions, glyph first.
 - [ ] Clicking a session in the dropdown does the same thing as clicking its row.
 - [ ] With more than ten active sessions the dropdown lists ten and then `…and N more in the panel`.
