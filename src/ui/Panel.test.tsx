@@ -484,13 +484,19 @@ describe('Panel', () => {
   it('shows an age for every session, whatever its kind', () => {
     // The old two-source pipeline had rows whose timestamp was the sweep that found them, so
     // they showed nothing. There is one source and one real transition time now (ADR-0018).
+    //
+    // The clock is frozen rather than read: `NOW` is captured when this module loads, and on a
+    // slow runner the twelve seconds below had become thirteen by the time the assertion ran.
+    const frozen = Date.parse('2026-09-09T12:00:00.000Z');
+    vi.useFakeTimers();
+    vi.setSystemTime(frozen);
     renderPanel([
-      session({ sessionId: 'a', title: 'Attached', stateSince: NOW - 12_000 }),
+      session({ sessionId: 'a', title: 'Attached', stateSince: frozen - 12_000 }),
       session({
         sessionId: 'b',
         title: 'Dispatched',
         kind: 'background',
-        stateSince: NOW - 12_000,
+        stateSince: frozen - 12_000,
       }),
     ]);
 
